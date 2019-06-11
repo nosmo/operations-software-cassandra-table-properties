@@ -1,0 +1,55 @@
+keyspaces:
+  - name: keyspace1
+    replication:
+      class: NetworkTopologyStrategy
+      data_centers:
+        - name: codfw
+          replication_factor: 2
+        - name: eqiad
+          replication_factor: 2
+    durable_writes: true
+    tables:
+        - name: data
+          compaction:
+            class: SizeTieredCompactionStrategy
+            min_threshold: 4
+            max_threshold: 32
+          speculative_retry: 99PERCENTILE
+          gc_grace_seconds: 864000
+        - name: data1
+          compaction:
+            class: SizeTieredCompactionStrategy
+            min_threshold: 4
+            max_threshold: 32
+          speculative_retry: 99PERCENTILE
+          gc_grace_seconds: 864000
+  - name: keyspace2
+    replication:
+       class: NetworkTopologyStrategy
+       data_centers:
+        - name: codfw
+          replication_factor: 3
+        - name: eqiad
+          replication_factor: 3
+    durable_writes: true
+    tables:
+      - name: data
+        compaction:
+          class: SizeTieredCompactionStrategy
+          min_threshold: 4
+          max_threshold: 32
+        speculative_retry: 99PERCENTILE
+        gc_grace_seconds: 864000
+  - name: keyspace3
+    replication:
+       class: SimpleStrategy
+       replication_factor: 3
+    durable_writes: true
+    tables:
+      - name: data
+        compaction:
+          class: SizeTieredCompactionStrategy
+          min_threshold: 4
+          max_threshold: 32
+        speculative_retry: 99PERCENTILE
+        gc_grace_seconds: 864000
