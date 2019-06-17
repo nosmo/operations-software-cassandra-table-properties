@@ -1,3 +1,3 @@
-from table_properties import cmd
+from table_properties import cli
 
-cmd.main()
+cli.main()
