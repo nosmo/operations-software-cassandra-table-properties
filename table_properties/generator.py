@@ -1,59 +1,88 @@
+import json
 import logging
 
 import table_properties as tp
 
-def isPrimitive(obj):
-    if isinstance(obj, bool) or isinstance(obj, str) or isinstance(obj, int) \
-        or isinstance(obj, float):
-        return True
+def compare_values(src:dict, dst:dict) -> list:
+    """ Compare configuration properties
 
-    return False
+    Args:
+        src: Current values
+        dst: Desired values
 
-def compareValues(src:dict, dst:dict):
+    Returns:
+        List of changed values
+    """
+    def is_primitive(obj) -> bool:
+        """Helper function for non-mapped properties
+
+        Args:
+            obj: Property value
+
+        Returns:
+            True if bool, string, integer, or float. False otherwise
+        """
+        return isinstance(obj, bool) or isinstance(obj, str) \
+            or isinstance(obj, int) or isinstance(obj, float)
+
     if not (isinstance(src, dict) and isinstance(dst, dict)):
         return []
 
     changed_values = []
     for k in dst.keys():
+        # Skip name properties
         if k == "name":
             continue
 
         dst_value = dst.get(k)
         src_value = src.get(k, None)
-        if (src_value and not isPrimitive(src_value)) or not isPrimitive(dst_value):
-            logging.warning("The value of '%s' is a complex type. You may want to break the type down.", k)
+        if (src_value and not is_primitive(src_value)) \
+            or not is_primitive(dst_value):
+            logging.debug("""The value of '%s' is a mapped type.
+                             You may want to break the type down.""", k)
 
-        if not src_value:
-            changed_values.append({ "action": "add" , "property": k, "desired": dst_value})
-        elif src_value != dst_value:
-            changed_values.append({ "action": "update" , "property": k, "current": src_value, "desired": dst_value})
+        if src_value != dst_value:
+            changed_values.append({ "property": k, "desired": dst_value })
 
     return changed_values
 
-def connect_statments(stmt, add_new_line = False):
+def connect_statments(stmt: str, add_new_line: bool = False) -> str:
+    """Helper function to connect partial CQL statements.
+
+    Args:
+        stmt:         Current CQL statement
+        add_new_line: Flag if connecting statement should be on new line
+
+    Returns:
+        connection line
+    """
     spacer = "\n" if add_new_line else " "
-    return f"{spacer}WITH " if not "WITH" in stmt else f"{spacer}AND "
+    return spacer + "WITH " if not "WITH " in stmt else spacer + "AND "
 
-def generate_alter_keyspace_statement(keyspace_name, current_keyspace, \
-    desired_keyspace):
+def generate_alter_keyspace_statement(keyspace_name: str, \
+    current_keyspace: dict, desired_keyspace: dict) -> str:
+    """Create ALTER statements for keyspace changes.
 
+    Args:
+        keyspace_name:    Keyspace
+        current_keyspace: Current keyspace properties
+        desired_keyspace: Desired keyspace properties
+
+    Returns:
+        CQL statement with changed properties or empty string
+    """
     current_replication = current_keyspace.pop("replication", {})
     desired_replication = desired_keyspace.pop("replication", {})
 
-    # Just pop it to get rid of it
-    current_replication.pop("data_centers", {})
-    desired_dcs = desired_replication.pop("data_centers", {})
+    stmt = "ALTER KEYSPACE {}".format(keyspace_name)
 
-    stmt = f"ALTER KEYSPACE {keyspace_name}"
-
-    changes = compareValues(current_keyspace, desired_keyspace)
+    changes = compare_values(current_keyspace, desired_keyspace)
     if changes:
         for change in changes:
-            if change.get("action") == "update":
-                stmt += connect_statments(stmt)
-                stmt += "{} = {}".format(change["property"], change["desired"])
+            stmt += connect_statments(stmt)
+            stmt += "{} = {}".format(change["property"], change["desired"])
 
-    repl_changes = compareValues(current_replication, desired_replication)
+    repl_changes = compare_values(current_replication, desired_replication)
 
     if repl_changes:
         stmt += connect_statments(stmt)
@@ -74,6 +103,8 @@ def generate_alter_keyspace_statement(keyspace_name, current_keyspace, \
             
             stmt += ", 'replication_factor': {} ".format(repl_factor)
 
+        desired_dcs = desired_replication.pop("data_centers", {})
+
         if "NetworkTopologyStrategy" == repl_class and desired_dcs:
             # Enumerate data center replication settings
             if isinstance(desired_dcs, list):
@@ -83,10 +114,21 @@ def generate_alter_keyspace_statement(keyspace_name, current_keyspace, \
 
         stmt += "};\n"
 
-    return stmt if "WITH" in stmt else ""
+    return stmt if "WITH " in stmt else ""
 
-def generate_alter_table_statement(keyspace_name, current_tables, \
-    desired_tables):
+def generate_alter_table_statement(keyspace_name: str, \
+    current_tables: dict, desired_tables: dict) -> str:
+    """ Create ALTER statements for tables in keyspace
+
+    Args:
+        keyspace_name:  Keyspace name
+        current_tables: Current table properties
+        desired_tables: Desired table properties
+
+    Returns:
+        CQL statement with changed properties or empty string
+    """
+    tbl_stmts = "\nUSE \"{}\";".format(keyspace_name)
 
     for desired_table in desired_tables:
         tbl_name = desired_table.get("name", None)
@@ -95,84 +137,40 @@ def generate_alter_table_statement(keyspace_name, current_tables, \
 
         current_table = tp.utils.find_by_value(current_tables, "name", \
             tbl_name)
+
         if not current_table:
-            logging.warning("Table %s does not exist. Skipping...", \
+            logging.warning("Table '%s' does not exist. Skipping...", \
                 tbl_name)
 
-        desired_caching = desired_table.pop("caching", {})
-        current_caching = current_table.pop("caching", {})
-
-        desired_cdc = desired_table.pop("cdc", {})
-        current_cdc = current_table.pop("cdc", {})
-
-        desired_compaction = desired_table.pop("compaction", {})
-        current_compaction = current_table.pop("compaction", {})
-
-        desired_compression = desired_table.pop("compression", {})
-        current_compression = current_table.pop("compression", {})
-
-        desired_extension = desired_table.pop("extensions", {})
-        current_extension = current_table.pop("extensions", {})
-
-        desired_flags = desired_table.pop("flags", {})
-        current_flags = current_table.pop("flags", {})
-
-        changes = compareValues(current_table, desired_table)
+        changes = compare_values(current_table, desired_table)
         if changes:
-            tbl_stmt = f"USE {keyspace_name};\nALTER TABLE {tbl_name}"
+            tbl_stmt = "\nALTER TABLE {}".format(tbl_name)
             for change in changes:
                 prop_name = change["property"]
                 prop_value = change["desired"]
                 if not prop_value or prop_name == "id":
                     continue
                 tbl_stmt += connect_statments(tbl_stmt, True)
-                tbl_stmt += "{} = {}" \
-                    if (str(prop_value).isnumeric()) else "{} = '{}'"\
-                        .format(prop_name, prop_value)
-    
-        caching_changes = compareValues(current_caching, desired_caching)
-        if caching_changes:
-            tbl_stmt += connect_statments(tbl_stmt, True)
-            tbl_stmt += "caching = {}".format(desired_caching)
+                tbl_stmt += "{} = {}".format(prop_name, prop_value) \
+                            if (isinstance(prop_value, dict) or \
+                                str(prop_value).isnumeric()) \
+                                else "{} = '{}'".format(prop_name, prop_value)
+            tbl_stmts += tbl_stmt
+            tbl_stmts += ";"
 
-        cdc_changes = compareValues(current_cdc, desired_cdc)
-        if cdc_changes:
-            tbl_stmt += connect_statments(tbl_stmt, True)
-            tbl_stmt += "cdc = {}".format(desired_cdc)
+    return tbl_stmts if isinstance(tbl_stmts, str) and "WITH " in tbl_stmts \
+        else ""
 
-        compaction_changes = compareValues(current_compaction, \
-            desired_compaction)
+def generate_alter_statements(current_config: dict, desired_config: dict)->str:
+    """ Create ALTER statements for tables and keyspaces
 
-        if compaction_changes:
-            tbl_stmt += connect_statments(tbl_stmt, True)
-            tbl_stmt += "compaction = {}".format(desired_compaction)
+    Args:
+        current_config: Current properties
+        desired_config: Desired properties
 
-        compression_changes = compareValues(current_compression, \
-            desired_compression)
-
-        if compression_changes:
-            tbl_stmt += connect_statments(tbl_stmt, True)
-            tbl_stmt += "compresion = {}".format(desired_compression)
-
-        extension_changes = compareValues(current_extension, \
-            desired_extension)
-
-        if extension_changes:
-            tbl_stmt += connect_statments(tbl_stmt, True)
-            tbl_stmt += "extension = {}".format(desired_extension)
-
-        flags_changes = compareValues(current_flags, \
-            desired_flags)
-
-        if flags_changes:
-            tbl_stmt += connect_statments(tbl_stmt, True)
-            tbl_stmt += "flags = {}".format(desired_flags)
-
-        tbl_stmt += ";"
-
-    return tbl_stmt if "WITH" in tbl_stmt else ""
-
-def generate_alter_statements(current_config, desired_config):
+    Returns:
+        CQL statement with changed properties or empty string
+    """
     current_keyspaces = current_config.get("keyspaces", [])
     desired_keyspaces = desired_config.get("keyspaces", [])
 
@@ -188,8 +186,9 @@ def generate_alter_statements(current_config, desired_config):
         current_keyspace = tp.utils.find_by_value(current_keyspaces, "name",
                                                   ks_name)
         if not current_keyspace:
-            logging.warning(f"""Skipped keyspace '{ks_name}'. Not found in 
-                             current config. Add keyspace via DDL schema""")
+            logging.warning("""Skipped keyspace '%s'. Not found in 
+                             current config. Add keyspace via DDL schema""",
+                             ks_name)
             continue
 
         current_tables = current_keyspace.pop("tables", {})
@@ -203,12 +202,12 @@ def generate_alter_statements(current_config, desired_config):
 
     return stmt
 
-
 def main():
     # Load keyspaces properties and table properties from current instance
     current_config = tp.db.get_current_config()
+
     # Load desired keyspace and table properties
-    desired_config = tp.utils.load_config("./configs/excalibur.yaml")
+    desired_config = tp.utils.load_yaml("./configs/excalibur.yaml")
 
     generate_alter_statements(current_config, desired_config)
 

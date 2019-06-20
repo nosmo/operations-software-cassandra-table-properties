@@ -37,61 +37,14 @@
             "required": [ "name" ],
             "additionalProperties": false,
             "properties": {
-                "name": { "type": "string" },
-                "comment": { "type": "string" },
-                "compaction": {
-                    "type": "object",
-                    "properties": {
-                        "class": {
-                            "enum": [ 
-                                "SizeTieredCompactionStrategy",
-                                "DateTieredCompactionStrategy",
-                                "TimeWindowCompactionStrategy",
-                                "LeveledCompactionStrategy"
-                            ]
-                        }
-                    }
-                },
-                "speculative_retry": {
-                    "type": "string",
-                    "pattern": "(?:^|(?<= ))(ALWAYS|NONE|\\d{1,3}PERCENTILE|\\d+ms)(?:(?= )|$)"
-                },
                 "additional_write_policy": {
                     "type": "string",
                     "pattern": "(?:^|(?<= ))(ALWAYS|NONE|\\d{1,3}PERCENTILE|\\d+ms)(?:(?= )|$)"
-                },
-                "gc_grace_seconds": {
-                    "type": "integer",
-                    "minimum": 0
                 },
                 "bloom_filter_fp_chance": {
                     "type": "number",
                     "minimum": 0.0,
                     "maximum": 1.0
-                },
-                "default_time_to_live": {
-                    "type": "integer",
-                    "minimum": 0
-                },
-                "compression" : {
-                    "type": "object",
-                    "properties": {
-                        "class": {
-                            "enum": [ "LZ4Compressor", "SnappyCompressor", "DeflateCompressor" ]
-                        },
-                        "chunk_length_kb": {
-                            "type": "integer",
-                            "minimum": 1
-                        },
-                        "crc_check_chance": {
-                            "type": "number",
-                            "minimum": 0.0,
-                            "maximum": 1.0
-                        },
-                        "sstable_compression": {
-                            "type": "string"
-                        }
-                    }
                 },
                 "caching": {
                     "type": "object",
@@ -111,13 +64,72 @@
                     },
                     "required": [ "keys", "rows_per_partition" ]
                 },
-                "memtable_flush_period_in_ms":  {
+                "cdc": { "type": ["boolean", "null"] },
+                "comment": { "type": "string" },
+                "compaction": {
+                    "type": "object",
+                    "properties": {
+                        "class": {
+                            "enum": [ 
+                                "SizeTieredCompactionStrategy",
+                                "DateTieredCompactionStrategy",
+                                "TimeWindowCompactionStrategy",
+                                "LeveledCompactionStrategy"
+                            ]
+                        }
+                    }
+                },
+                "compression" : {
+                    "type": "object",
+                    "properties": {
+                        "class": {
+                            "enum": [ "LZ4Compressor", "SnappyCompressor", "DeflateCompressor" ]
+                        },
+                        "chunk_length_kb": {
+                            "type": "integer",
+                            "minimum": 1
+                        },
+                        "sstable_compression": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "crc_check_chance": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                },
+                "dclocal_read_repair_chance": { "type": "number" },
+                "default_time_to_live": {
                     "type": "integer",
                     "minimum": 0
                 },
+                "extensions": { "type": "object" },
+                "flags": { "type": "array" },
+                "gc_grace_seconds": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "id": { "type": "string" },
+                "memtable_flush_period_in_ms": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "min_index_interval": {
+                    "type": "integer"
+                },
+                "max_index_interval": {
+                    "type": "integer"
+                },
+                "name": { "type": "string" },
                 "read_repair": {
                     "type": "string",
                     "pattern": "(?:^|(?<= ))(NONE|BLOCKING)(?:(?= )|$)"
+                },
+                "read_repair_chance": { "type": "number" },
+                "speculative_retry": {
+                    "type": "string",
+                    "pattern": "(?:^|(?<= ))(ALWAYS|NONE|\\d{1,3}PERCENTILE|\\d+ms)(?:(?= )|$)"
                 }
             },
             "if": {

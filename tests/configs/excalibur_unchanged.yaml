@@ -1,12 +1,12 @@
 keyspaces:
-- durable_writes: false
+- durable_writes: true
   name: excalibur
   replication:
     class: NetworkTopologyStrategy
     data_centers:
-    - name: datacenter1
+    - name: data_center1
       replication_factor: 3
-    - name: datacenter2
+    - name: data_center2
       replication_factor: 3
   tables:
   - bloom_filter_fp_chance: 0.01
@@ -14,7 +14,7 @@ keyspaces:
       keys: ALL
       rows_per_partition: NONE
     cdc: null
-    comment: 'All for one and one for all'
+    comment: Important biological records
     compaction:
       class: SizeTieredCompactionStrategy
       max_threshold: 32
@@ -22,14 +22,14 @@ keyspaces:
     compression:
       chunk_length_in_kb: 64
       class: LZ4Compressor
-    crc_check_chance: 1.0
+      crc_check_chance: 1.0
     dclocal_read_repair_chance: 0.1
     default_time_to_live: 0
     extensions: {}
     flags:
     - compound
     gc_grace_seconds: 864000
-    id: 66080d20-8c65-11e9-bb1a-83c535a26367
+    id: 002d4720-94f0-11e9-8cd8-138d758badbc
     max_index_interval: 2048
     memtable_flush_period_in_ms: 0
     min_index_interval: 128
