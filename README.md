@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/hknustwmf/cassandra-table-properties.svg?branch=master)](https://travis-ci.com/hknustwmf/cassandra-table-properties)
+
 # cassandra-table-properties
 
 Cassandra table and keyspace configuration tool.
