@@ -83,14 +83,15 @@ def load_file(filename:str, loader, encoding: str = "utf-8"):
     content = None
 
     if not os.path.isfile(filename):
-        print("File not found : {}".format(filename))
-        return
+        msg = "File '{}' not found".format(filename)
+        logging.error(msg)
+        raise Exception(msg)
 
     try:
         with open(filename, "r", encoding=encoding) as f:
             content = loader(f)
     except Exception as ex:
-        logging.error(ex)
+        logging.exception(ex)
 
     return content
 
@@ -106,9 +107,11 @@ def write_file(filename: str, data: dict, overwrite: bool, writer,
         True if write succeeded. False otherwise
     """
     if os.path.isfile(filename) and not overwrite:
-        logging.warning("""Configuration file '%s' already exists. Add -f or 
-                           --force if you like to overwrite the existing 
-                           file.""", filename)
+        msg = "Configuration file '{}' already exists.".format(filename) \
+            + "Add -f or --force if you like to overwrite the existing file."
+        logging.warning(msg)
+        print(msg)
+
         return False
 
     try:
@@ -129,6 +132,7 @@ def load_yaml(filename: str) -> typing.Optional[dict]:
         A dict or None.
     """
     return load_file(filename, yaml.safe_load)
+
 
 def write_yaml(filename: str, data: dict, overwrite: bool = False) -> bool:
     """Write a YAML config file
@@ -171,6 +175,7 @@ def validate_schema(schema: dict, data: dict) -> bool:
         logging.exception(ve)
         for error in sorted(v.iter_errors(data), key=str):
             logging.debug(error.message)
+        raise Exception("Schema validation failed. See log for details.")
 
     return False
 
