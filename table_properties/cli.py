@@ -3,8 +3,6 @@ import logging
 import os
 import sys
 
-import yaml
-
 import table_properties as tp
 
 class TablePropertiesCli():

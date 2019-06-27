@@ -1,4 +1,9 @@
-from . import db, utils, generator
+try:
+    from . import db, utils, generator
+except ImportError as iex:
+    print(iex)
+    print("Please run 'pip install -f requirements.txt'")
+    exit(1)
 
 database = db
 utils = utils
