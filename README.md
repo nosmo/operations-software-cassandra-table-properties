@@ -9,7 +9,7 @@ Cassandra table and keyspace configuration tool.
 Python 3.4 or higher is required. Install the dependencies with
 
 ```bash
-pip install -f requirements.txt
+pip install -r requirements.txt
 ```
 
 # Usage:

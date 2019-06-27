@@ -1,7 +1,10 @@
+import os
 import setuptools
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+long_description = ""
+if os.path.exists("README.md"):
+    with open("README.md", "r") as fh:
+        long_description = fh.read()
 
 setuptools.setup(
     name="cassandra-table-properties",
