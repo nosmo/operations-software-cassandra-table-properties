@@ -2,9 +2,6 @@ import table_properties as tp
 import json
 
 class TestGenerator:
-    def test_isPrimitive(self):
-        assert tp.generator.isPrimitive(True) == True
-
     def test_excalibur_increase_replicas(self):
         # Load the mock config
         with open("./tests/mocks/excalibur.json", "r") as f:

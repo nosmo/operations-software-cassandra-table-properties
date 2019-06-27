@@ -28,4 +28,4 @@ This generates ALTER statements if any differences between the configurations we
 
 `table-properties <filename> | cqlsh`
 
-to update the configuration of the local instance.
+to update the configuration of Cassandra.
