@@ -15,7 +15,7 @@ matrix:
     - python: 3.6
       env:
         - TOX_ENV=py37
-      script: tox -e $TOX_ENV
+script: tox -e $TOX_ENV
 branches:
   only:
     - master
