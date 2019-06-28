@@ -1,9 +1,9 @@
-import json
+#pylint: disable = missing-docstring
 import logging
 
-import table_properties as tp
+from table_properties import db, utils
 
-def compare_values(src:dict, dst:dict) -> list:
+def compare_values(src: dict, dst: dict) -> list:
     """ Compare configuration properties
 
     Args:
@@ -22,8 +22,7 @@ def compare_values(src:dict, dst:dict) -> list:
         Returns:
             True if bool, string, integer, or float. False otherwise
         """
-        return isinstance(obj, bool) or isinstance(obj, str) \
-            or isinstance(obj, int) or isinstance(obj, float)
+        return isinstance(obj, (bool, float, int, str))
 
     if not (isinstance(src, dict) and isinstance(dst, dict)):
         return []
@@ -42,7 +41,7 @@ def compare_values(src:dict, dst:dict) -> list:
                              You may want to break the type down.""", k)
 
         if src_value != dst_value:
-            changed_values.append({ "property": k, "desired": dst_value })
+            changed_values.append({"property": k, "desired": dst_value})
 
     return changed_values
 
@@ -91,7 +90,7 @@ def generate_alter_keyspace_statement(keyspace_name: str, \
         repl_class = desired_replication.get("class", None)
         if not repl_class:
             raise ValueError("Replication class must be provided")
-        
+
         stmt += "'class': '{}'".format(repl_class)
 
         if desired_replication.get("replication_factor", None):
@@ -100,17 +99,17 @@ def generate_alter_keyspace_statement(keyspace_name: str, \
                     int(desired_replication.get("replication_factor"))
             except ValueError:
                 repl_factor = 1
-            
+
             stmt += ", 'replication_factor': {} ".format(repl_factor)
 
         desired_dcs = desired_replication.pop("data_centers", {})
 
-        if "NetworkTopologyStrategy" == repl_class and desired_dcs:
+        if repl_class == "NetworkTopologyStrategy" and desired_dcs:
             # Enumerate data center replication settings
             if isinstance(desired_dcs, list):
-                for dc in desired_dcs:
+                for data_center in desired_dcs:
                     stmt = stmt + ",'{}': '{}'" \
-                        .format(dc["name"], dc["replication_factor"])
+                        .format(data_center["name"], data_center["replication_factor"])
 
         stmt += "};\n"
 
@@ -135,7 +134,7 @@ def generate_alter_table_statement(keyspace_name: str, \
         if not tbl_name:
             raise Exception("Missing table name in config")
 
-        current_table = tp.utils.find_by_value(current_tables, "name", \
+        current_table = utils.find_by_value(current_tables, "name", \
             tbl_name)
 
         if not current_table:
@@ -179,16 +178,16 @@ def generate_alter_statements(current_config: dict, desired_config: dict)->str:
     for desired_keyspace in desired_keyspaces:
         ks_name = desired_keyspace.get("name", None)
         if not ks_name:
-            logging.error("Invalid keyspace '%s' config. Missing 'name' key", 
-                           desired_keyspace)
+            logging.error("Invalid keyspace '%s' config. Missing 'name' key",
+                          desired_keyspace)
             raise Exception("Invalid configuration data")
 
-        current_keyspace = tp.utils.find_by_value(current_keyspaces, "name",
-                                                  ks_name)
+        current_keyspace = utils.find_by_value(current_keyspaces, "name",
+                                               ks_name)
         if not current_keyspace:
-            logging.warning("""Skipped keyspace '%s'. Not found in 
-                             current config. Add keyspace via DDL schema""",
-                             ks_name)
+            logging.warning("""Skipped keyspace '%s'. Not found in
+                            current config. Add keyspace via DDL schema""",
+                            ks_name)
             continue
 
         current_tables = current_keyspace.pop("tables", {})
@@ -204,10 +203,10 @@ def generate_alter_statements(current_config: dict, desired_config: dict)->str:
 
 def main():
     # Load keyspaces properties and table properties from current instance
-    current_config = tp.db.get_current_config()
+    current_config = db.get_current_config()
 
     # Load desired keyspace and table properties
-    desired_config = tp.utils.load_yaml("./configs/excalibur.yaml")
+    desired_config = utils.load_yaml("./configs/excalibur.yaml")
 
     generate_alter_statements(current_config, desired_config)
 

@@ -1,8 +1,14 @@
 language: python
+
 install:
   - pip install tox
+
 services:
   - cassandra
+
+env:
+  - CODECOV_TOKEN="78fc939e-430c-44ee-9396-adde6b4504b0"
+
 matrix:
   include:
     - python: 3.4
@@ -18,7 +24,12 @@ matrix:
       dist: xenial
       env:
         - TOX_ENV=py37
+
 script: tox -e $TOX_ENV
+
 branches:
   only:
     - master
+
+after_success:
+  - codecov

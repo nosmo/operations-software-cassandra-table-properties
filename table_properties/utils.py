@@ -1,10 +1,13 @@
-import functools
+#pylint: disable = missing-docstring, broad-except
+""" Helper functions
+"""
 import json
-import jsonschema
 import logging
 import os
 import time
 import typing
+
+import jsonschema
 import yaml
 
 
@@ -17,12 +20,12 @@ def setup_logging(log_file: str = "", log_level=logging.DEBUG) -> None:
         log_file:  optional name of log file
         log_level: log level defaults to DEBUG
     """
-    log_file = os.path.join(get_app_folder(), log_file if log_file else 
+    log_file = os.path.join(get_app_folder(), log_file if log_file else \
         get_timestamped_filename("tp", ".log"))
 
     logging.basicConfig(format=DEFAULT_LOG_FORMAT,
-        handlers=[logging.FileHandler(log_file)],
-        level=logging.DEBUG)
+                        handlers=[logging.FileHandler(log_file)],
+                        level=log_level)
 
     # Color codes http://www.tldp.org/HOWTO/Bash-Prompt-HOWTO/x329.html
     logging.addLevelName(  # cyan
@@ -52,9 +55,9 @@ def get_timestamped_filename(prefix: str = "", ext: str = "") -> str:
     Returns:
         Filename
     """
-    p = prefix + "_" if prefix else ""
-    x = ext if "." in ext else "." + ext
-    return "{}{}{}".format(p, time.strftime("%Y%m%d-%H%M%S"), x)
+    new_prefix = prefix + "_" if prefix else ""
+    new_ext = ext if "." in ext else "." + ext
+    return "{}{}{}".format(new_prefix, time.strftime("%Y%m%d-%H%M%S"), new_ext)
 
 def get_app_folder() -> str:
     """Return application folder path
@@ -66,7 +69,7 @@ def get_app_folder() -> str:
 
     return os.path.abspath(os.path.join(script_dir, os.pardir))
 
-def load_file(filename:str, loader, encoding: str = "utf-8"):
+def load_file(filename: str, loader, encoding: str = "utf-8"):
     """Load a structured text file
 
     Retrieve a structured file in e.g. JSON or YAML format.
@@ -88,15 +91,15 @@ def load_file(filename:str, loader, encoding: str = "utf-8"):
         raise Exception(msg)
 
     try:
-        with open(filename, "r", encoding=encoding) as f:
-            content = loader(f)
+        with open(filename, "r", encoding=encoding) as in_file:
+            content = loader(in_file)
     except Exception as ex:
         logging.exception(ex)
 
     return content
 
 def write_file(filename: str, data: dict, overwrite: bool, writer,
-        encoding: str = "utf-8", **options) -> bool:
+               encoding: str = "utf-8", **options) -> bool:
     """Write a structured text file
 
     Args:
@@ -166,20 +169,20 @@ def validate_schema(schema: dict, data: dict) -> bool:
     Returns:
         True if valid. False otherwise.
     """
-    v = None
+    validator = None
     try:
-        v = jsonschema.Draft7Validator(schema)
-        v.validate(data)
+        validator = jsonschema.Draft7Validator(schema)
+        validator.validate(data)
         return True
-    except jsonschema.ValidationError as ve:
-        logging.exception(ve)
-        for error in sorted(v.iter_errors(data), key=str):
+    except jsonschema.ValidationError as val_err:
+        logging.exception(val_err)
+        for error in sorted(validator.iter_errors(data), key=str):
             logging.debug(error.message)
         raise Exception("Schema validation failed. See log for details.")
 
     return False
 
-def find_by_value(dict_list: list, key: str, value, default_value = None):
+def find_by_value(dict_list: list, key: str, value, default_value=None):
     """Search list of dictionaries by value and return first match
 
     Returns:

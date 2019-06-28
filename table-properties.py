@@ -10,5 +10,4 @@ if ver_major < 3 or (ver_major == 3 and ver_minor < 4):
     exit(1)
 
 from table_properties import cli
-
 cli.main()

@@ -1,3 +1,6 @@
+#pylint: disable = broad-except, dangerous-default-value
+""" CLI interface class
+"""
 import argparse
 import logging
 import os
@@ -8,21 +11,18 @@ import table_properties as tp
 class TablePropertiesCli():
     """Command-line interface class
     """
-    def parse_arguments(self, args=sys.argv[1:]) -> argparse.Namespace:
-        """ Parse shell parameters
 
-        Returns:
-            Namespace object exposing parameters as attributes
-        """
-        return self.get_arg_parser().parse_args(args)
+    def __init__(self):
+        self.args = None
 
-    def get_arg_parser(self) -> argparse.ArgumentParser:
+    @staticmethod
+    def get_arg_parser() -> argparse.ArgumentParser:
         """Set up CLI arguments in parser
 
         Returns:
             argparse.ArgumentParser
         """
-        parser = argparse.ArgumentParser(prog=tp.PROG_NAME,
+        parser = argparse.ArgumentParser(prog=tp.PROG_NAME, \
             description="""Compare actual Cassandra keyspace and table
                            configuration against desired configuration
                            and create ALTER statements to change the current
@@ -40,8 +40,8 @@ class TablePropertiesCli():
 
         parser.set_defaults(force_overwrite=False)
 
-        parser.add_argument("-o",
-                            "--output",
+        parser.add_argument("-d",
+                            "--dump",
                             metavar="<filename>",
                             dest="dump_file",
                             help="Dump current configuration settings to file",
@@ -50,12 +50,12 @@ class TablePropertiesCli():
         parser.add_argument("-v",
                             "--version",
                             action="version",
-                            version="{} {}".format(tp.PROG_NAME,
+                            version="{} {}".format(tp.PROG_NAME, \
                                 tp.PROG_VERSION))
 
         return parser
 
-    def execute(self) -> None:
+    def execute(self, args: list = []) -> None:
         """Execute applicaton
         """
         # Modify root logger settings
@@ -65,8 +65,8 @@ class TablePropertiesCli():
         app_dir = tp.utils.get_app_folder()
 
         # Load the desired configuration from file
-        self.args = self.parse_arguments()
-        
+        self.args = TablePropertiesCli.get_arg_parser().parse_args(args)
+
         try:
             # Read current configuration from database
             current_config = tp.db.get_current_config()
@@ -101,8 +101,10 @@ class TablePropertiesCli():
             print(ex)
 
 def main():
+    """ Main function
+    """
     tpc = TablePropertiesCli()
-    tpc.execute()
+    tpc.execute(args=sys.argv[1:])
 
 if __name__ == "__main__":
     main()

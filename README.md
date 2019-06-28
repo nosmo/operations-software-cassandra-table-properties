@@ -23,7 +23,7 @@ table-properties -h
 To dump the current configuration into YAML use
 
 ```bash
-table-properties -o <filename> [-f]
+table-properties -d <filename> [-f]
 ```
 
 You may get a warning if the file already exists. Add `-f` to force overwrite.
