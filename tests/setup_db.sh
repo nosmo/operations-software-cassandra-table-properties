@@ -12,6 +12,5 @@ SCHEMA_DIR=$(pwd)/tests/cql
 [[ ! -d $SCHEMA_DIR ]] && die "Cannot locate create scripts"
 
 echo "Running schema creation scripts..."
-find $SCHEMA_DIR -name 'create_*.cql' -exec cat {} \; | cqlsh
-
+find $SCHEMA_DIR -name 'create_*.cql' -exec cat {} \; | cqlsh –cqlversion=3.4.4
 echo "Done."
