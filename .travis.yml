@@ -11,6 +11,7 @@ before_install:
   - java -version
   - sudo rm -rf /var/lib/cassandra/*
   - wget http://www.us.apache.org/dist/cassandra/3.11.4/apache-cassandra-3.11.4-bin.tar.gz && tar -xvzf apache-cassandra-3.11.4-bin.tar.gz
+  - ./apache-cassandra-3.11.4/bin/cqlsh --version
   - sudo sh ./apache-cassandra-3.11.4/bin/cassandra -R
   - sleep 20
 
