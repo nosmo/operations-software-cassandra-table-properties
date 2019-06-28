@@ -1,13 +1,21 @@
 language: python
 
+addons:
+  apt:
+    packages:
+      - openjdk-8-jre-headless
+
+before_install:
+  - sudo update-java-alternatives -s java-1.8.0-openjdk-amd64
+  - export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
+  - java -version
+  - sudo rm -rf /var/lib/cassandra/*
+  - wget http://www.us.apache.org/dist/cassandra/3.11.4/apache-cassandra-3.11.4-bin.tar.gz && tar -xvzf apache-cassandra-3.11.4-bin.tar.gz
+  - sudo sh ./apache-cassandra-3.11.4/bin/cassandra -R
+  - sleep 20
+
 install:
-  - pip install tox
-
-services:
-  - cassandra
-
-env:
-  - CODECOV_TOKEN="78fc939e-430c-44ee-9396-adde6b4504b0"
+  - pip install tox codecov
 
 matrix:
   include:
