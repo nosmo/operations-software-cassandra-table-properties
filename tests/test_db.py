@@ -1,5 +1,6 @@
 import table_properties.db as db
 
+
 class TestDb():
     def test_ConvertValue(self):
         assert db.convert_value(1.0) == 1.0

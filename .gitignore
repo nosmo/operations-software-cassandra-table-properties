@@ -109,5 +109,5 @@ venv.bak/
 *.log
 
 # Coverage reports
-coverage
-htmlcov
+coverage/
+htmlcov/

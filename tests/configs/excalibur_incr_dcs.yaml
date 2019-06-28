@@ -5,7 +5,7 @@ keyspaces:
     class: NetworkTopologyStrategy
     data_centers:
     - name: data_center1
-      replication_factor: 5
+      replication_factor: 4
     - name: data_center2
       replication_factor: 5
   tables:

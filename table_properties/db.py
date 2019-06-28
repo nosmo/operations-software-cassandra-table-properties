@@ -169,6 +169,33 @@ def exec_query(connection: dict, query_stmt: str) -> list:
 
     return []
 
+def check_connection(connection: dict):
+    """Test Cassandra connectivity
+
+    Args:
+        connection: connection paramters
+
+    Returns:
+        True if connection was successful. False otherwise
+    """
+    try:
+        cluster = cassandra.cluster.Cluster(
+            connection.get("hosts", get_local_connection()["hosts"]),
+            port=connection.get("port", get_local_connection()["port"]),
+            load_balancing_policy=connection.get("load_balancing_policy", \
+                get_local_connection()["load_balancing_policy"])
+        )
+
+        with cluster.connect():
+            return True
+    except cassandra.cluster.NoHostAvailable as nhex:
+        logging.exception(nhex)
+    except Exception as ex:
+        logging.exception(ex)
+        raise
+
+    return False
+
 def get_keyspace_configs(connection: dict) -> dict:
     """Retrieve all keyspace properties.
 
@@ -196,7 +223,8 @@ def get_keyspace_configs(connection: dict) -> dict:
 
     return {"keyspaces": keyspace_configs}
 
-def get_table_configs(connection: dict, keyspace_name: str) -> dict:
+def get_table_configs(connection: dict, keyspace_name: str,
+                      drop_ids: bool) -> dict:
     """Retrieve table properties
 
     Args:
@@ -215,7 +243,7 @@ def get_table_configs(connection: dict, keyspace_name: str) -> dict:
     for row in rows:
         tbl = {}
         for key, val in row.items():
-            if key == "keyspace_name":
+            if key == "keyspace_name" or (key == "id" and drop_ids):
                 continue
             elif isinstance(val, cassandra.util.OrderedMapSerializedKey):
                 if key == "replication":
@@ -232,7 +260,7 @@ def get_table_configs(connection: dict, keyspace_name: str) -> dict:
 
     return table_configs
 
-def get_current_config(connection: dict = None) -> dict:
+def get_current_config(connection: dict = None, drop_ids: bool = False) -> dict:
     """Retrieve the current config from the Cassandra instance.
 
     Args:
@@ -247,10 +275,10 @@ def get_current_config(connection: dict = None) -> dict:
     keyspaces = get_keyspace_configs(connection)
 
     for keyspace in keyspaces.get("keyspaces", []):
-        keyspace["tables"] = get_table_configs(connection, keyspace.get("name"))
+        keyspace["tables"] = get_table_configs(connection, \
+            keyspace.get("name"), drop_ids)
 
     return keyspaces
-
 
 def main():
     """ Main function
