@@ -1,10 +1,11 @@
-[![Build Status](https://travis-ci.com/hknustwmf/cassandra-table-properties.svg?branch=master)](https://travis-ci.com/hknustwmf/cassandra-table-properties)
-
 # cassandra-table-properties
+
+[![Build Status](https://travis-ci.com/hknustwmf/cassandra-table-properties.svg?branch=master)](https://travis-ci.com/hknustwmf/cassandra-table-properties)
+[![codecov](https://codecov.io/gh/hknustwmf/cassandra-table-properties/branch/master/graph/badge.svg)](https://codecov.io/gh/hknustwmf/cassandra-table-properties)
 
 Cassandra table and keyspace configuration tool.
 
-# Installation
+## Installation
 
 Python 3.4 or higher is required. Install the dependencies with
 
@@ -12,7 +13,7 @@ Python 3.4 or higher is required. Install the dependencies with
 pip install -r requirements.txt
 ```
 
-# Usage:
+## Usage
 
 From the command prompt, execute below to get help on available options
 
