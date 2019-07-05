@@ -1,4 +1,5 @@
-#pylint: disable = missing-docstring, invalid-name
+# pylint: disable=missing-docstring, invalid-name
+
 try:
     from . import db, utils, generator
 except ImportError as iex:

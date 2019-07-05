@@ -1,4 +1,6 @@
+# pylint: disable=missing-docstring, invalid-name, no-self-use, too-few-public-methods
 import table_properties.cli as cli
+
 
 class TestTablePropertiesCli():
     def test_InvokeNoArgsUsage(self, capsys):

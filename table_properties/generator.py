@@ -1,7 +1,10 @@
-#pylint: disable = missing-docstring
+# pylint: disable=missing-docstring
+""" Functions to create ALTER statements
+"""
 import logging
 
 from table_properties import db, utils
+
 
 def compare_values(src: dict, dst: dict) -> list:
     """ Compare configuration properties
@@ -13,6 +16,7 @@ def compare_values(src: dict, dst: dict) -> list:
     Returns:
         List of changed values
     """
+
     def is_primitive(obj) -> bool:
         """Helper function for non-mapped properties
 
@@ -36,7 +40,7 @@ def compare_values(src: dict, dst: dict) -> list:
         dst_value = dst.get(k)
         src_value = src.get(k, None)
         if (src_value and not is_primitive(src_value)) \
-            or not is_primitive(dst_value):
+                or not is_primitive(dst_value):
             logging.debug("""The value of '%s' is a mapped type.
                              You may want to break the type down.""", k)
 
@@ -44,6 +48,7 @@ def compare_values(src: dict, dst: dict) -> list:
             changed_values.append({"property": k, "desired": dst_value})
 
     return changed_values
+
 
 def connect_statments(stmt: str, add_new_line: bool = False) -> str:
     """Helper function to connect partial CQL statements.
@@ -56,10 +61,12 @@ def connect_statments(stmt: str, add_new_line: bool = False) -> str:
         connection line
     """
     spacer = "\n" if add_new_line else " "
-    return spacer + "WITH " if not "WITH " in stmt else spacer + "AND "
+    return spacer + "WITH " if "WITH " not in stmt else spacer + "AND "
 
-def generate_alter_keyspace_statement(keyspace_name: str, \
-    current_keyspace: dict, desired_keyspace: dict) -> str:
+
+def generate_alter_keyspace_statement(keyspace_name: str,
+                                      current_keyspace: dict,
+                                      desired_keyspace: dict) -> str:
     """Create ALTER statements for keyspace changes.
 
     Args:
@@ -80,8 +87,10 @@ def generate_alter_keyspace_statement(keyspace_name: str, \
 
     return stmt + ";\n" if "WITH " in stmt else ""
 
-def generate_alter_table_statement(keyspace_name: str, \
-    current_tables: dict, desired_tables: dict) -> str:
+
+def generate_alter_table_statement(keyspace_name: str,
+                                   current_tables: dict,
+                                   desired_tables: dict) -> str:
     """ Create ALTER statements for tables in keyspace
 
     Args:
@@ -99,12 +108,12 @@ def generate_alter_table_statement(keyspace_name: str, \
         if not tbl_name:
             raise Exception("Missing table name in config")
 
-        current_table = utils.find_by_value(current_tables, "name", \
-            tbl_name)
+        current_table = utils.find_by_value(current_tables, "name",
+                                            tbl_name)
 
         if not current_table:
-            logging.warning("Table '%s' does not exist. Skipping...", \
-                tbl_name)
+            logging.warning("Table '%s' does not exist. Skipping...",
+                            tbl_name)
 
         changes = compare_values(current_table, desired_table)
         if changes:
@@ -115,15 +124,17 @@ def generate_alter_table_statement(keyspace_name: str, \
                 if not prop_value or prop_name == "id":
                     continue
                 tbl_stmt += connect_statments(tbl_stmt, True)
-                tbl_stmt += "{} = {}".format(prop_name, prop_value) \
-                            if (isinstance(prop_value, dict) or \
-                                str(prop_value).isnumeric()) \
-                                else "{} = '{}'".format(prop_name, prop_value)
-            tbl_stmts += tbl_stmt
+                if (isinstance(prop_value, dict) or
+                        str(prop_value).isnumeric()):
+                    param_templ = "{} = {}"
+                else:
+                    param_templ = "{} = '{}'"
+            tbl_stmts += param_templ.format(prop_name, prop_value)
             tbl_stmts += ";"
 
     return tbl_stmts if isinstance(tbl_stmts, str) and "WITH " in tbl_stmts \
         else ""
+
 
 def generate_alter_statements(current_config: dict, desired_config: dict)->str:
     """ Create ALTER statements for tables and keyspaces
@@ -158,13 +169,15 @@ def generate_alter_statements(current_config: dict, desired_config: dict)->str:
         current_tables = current_keyspace.pop("tables", {})
         desired_tables = desired_keyspace.pop("tables", {})
 
-        stmt += generate_alter_keyspace_statement(ks_name, \
-            current_keyspace, desired_keyspace)
+        stmt += generate_alter_keyspace_statement(ks_name,
+                                                  current_keyspace,
+                                                  desired_keyspace)
 
-        stmt += generate_alter_table_statement(ks_name, current_tables, \
-            desired_tables)
+        stmt += generate_alter_table_statement(ks_name, current_tables,
+                                               desired_tables)
 
     return stmt
+
 
 def main():
     conn_params = db.get_connection_settings()

@@ -1,3 +1,4 @@
+# pylint: disable=missing-docstring, invalid-name, no-self-use, too-few-public-methods
 import table_properties.db as db
 
 
@@ -12,4 +13,4 @@ class TestDb():
         assert db.convert_value("2.0") == 2.0
         assert isinstance(db.convert_value("2.0"), float)
         assert db.convert_value("test") == "test"
-        assert db.convert_value([1,2]) == [1,2]
+        assert db.convert_value([1, 2]) == [1, 2]

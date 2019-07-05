@@ -1,8 +1,8 @@
-#pylint: disable = c-extension-no-member
+# pylint: disable=too-many-arguments, too-many-branches
 """ Database interface
 """
 import logging
-import os
+# import os
 import ssl
 
 import cassandra
@@ -12,26 +12,30 @@ import cassandra.query
 import cassandra.util
 import cassandra.policies
 
+
 def get_protocol_version(proto_version: int):
-    d = { 
-            "1": cassandra.ProtocolVersion.V1,
-            "2": cassandra.ProtocolVersion.V2,
-            "3": cassandra.ProtocolVersion.V3,
-            "4": cassandra.ProtocolVersion.V4,
-            "5": cassandra.ProtocolVersion.V5
-        }
-    return d.get(proto_version, cassandra.ProtocolVersion.V2)
+    """Return protocol version
+    """
+    version_dict = {
+        "1": cassandra.ProtocolVersion.V1,
+        "2": cassandra.ProtocolVersion.V2,
+        "3": cassandra.ProtocolVersion.V3,
+        "4": cassandra.ProtocolVersion.V4,
+        "5": cassandra.ProtocolVersion.V5
+    }
+    return version_dict.get(proto_version, cassandra.ProtocolVersion.V2)
+
 
 def get_connection_settings(
-                   contact_points: list = None,
-                   port: int = None,
-                   protocol_version = None,
-                   username: str = None,
-                   password: str = None,
-                   use_tls: bool = False,
-                   client_cert_file: str = None,
-                   client_key_file: str = None,
-                   rc_config: dict = None) -> dict:
+        contact_points: list = None,
+        port: int = None,
+        protocol_version=None,
+        username: str = None,
+        password: str = None,
+        use_tls: bool = False,
+        client_cert_file: str = None,
+        client_key_file: str = None,
+        rc_config: dict = None) -> dict:
     """Construct connection settings dictionary.
     Args:
         contact_points:   IP addresses or hostnames
@@ -104,6 +108,7 @@ def get_connection_settings(
 
     return params
 
+
 def get_class_name(full_class_name: str) -> str:
     """Return actual class name
 
@@ -119,6 +124,7 @@ def get_class_name(full_class_name: str) -> str:
         Actual class name
     """
     return full_class_name.split(".")[-1]
+
 
 def convert_value(val: any) -> any:
     """Convert a string to a number
@@ -146,6 +152,7 @@ def convert_value(val: any) -> any:
 
     return val
 
+
 def key_mapper(orig_key) -> str:
     """ Return the id field name
 
@@ -158,6 +165,7 @@ def key_mapper(orig_key) -> str:
     mapping = {"keyspace_name": "name", "table_name": "name"}
 
     return mapping.get(orig_key, orig_key)
+
 
 def get_replication_settings(replication: dict) -> dict:
     """Return mapping with replication settings
@@ -189,6 +197,7 @@ def get_replication_settings(replication: dict) -> dict:
 
     return repl_config
 
+
 def convert_mapped_props(subconfig):
     """Convert mapped properties
 
@@ -209,6 +218,7 @@ def convert_mapped_props(subconfig):
         settings[key] = convert_value(value)
 
     return settings
+
 
 def get_cluster(connection_settings: dict) -> cassandra.cluster.Cluster:
     """Create and return a cluster instance.
@@ -237,6 +247,7 @@ def get_cluster(connection_settings: dict) -> cassandra.cluster.Cluster:
 
     return cluster
 
+
 def exec_query(connection: dict, query_stmt: str) -> list:
     """Execute Cassandra query
 
@@ -250,19 +261,26 @@ def exec_query(connection: dict, query_stmt: str) -> list:
     try:
         cluster = get_cluster(connection)
 
-        with cluster.connect("system_schema", wait_for_all_pools=True) as session:
+        with cluster.connect("system_schema",
+                             wait_for_all_pools=True) as session:
             session.row_factory = cassandra.query.ordered_dict_factory
             rows = session.execute(query_stmt)
 
             return rows.current_rows
-    except cassandra.cluster.NoHostAvailable as nhex:
-        logging.exception(nhex)
-        raise Exception("Failed to connect to Cassandra. See log for details.")
+    except (cassandra.cluster.NoHostAvailable) as ex:
+        if hasattr(ex, "errors"):
+            for err, obj in ex.errors.items():
+                msg = "Host {} responded with '{}'".format(err, str(obj))
+                if isinstance(obj, cassandra.cluster.ConnectionShutdown):
+                    msg += " " if msg[-1] == "." else ". "
+                    msg += "Is SSL/TLS required to connect to the host?"
+                print(msg)
     except Exception as ex:
         logging.exception(ex)
         raise
 
     return []
+
 
 def check_connection(connection: dict):
     """Test Cassandra connectivity
@@ -278,15 +296,20 @@ def check_connection(connection: dict):
 
         with cluster.connect():
             return True
-    except cassandra.cluster.NoHostAvailable as nhex:
-        host = connection.get("hostname", "127.0.0.1")
-        port = connection.get("port", "9042")
-        print("\nFailed to connect to {}:{}".format(host, port))
+    except (cassandra.cluster.NoHostAvailable) as ex:
+        if hasattr(ex, "errors"):
+            for err, obj in ex.errors.items():
+                msg = "Host {} responded with '{}'".format(err, str(obj))
+                if isinstance(obj, cassandra.cluster.ConnectionShutdown):
+                    msg += " " if msg[-1] == "." else ". "
+                    msg += "Is SSL/TLS required to connect to the host?"
+                print(msg)
     except Exception as ex:
         logging.exception(ex)
         raise
 
     return False
+
 
 def get_keyspace_configs(connection: dict) -> dict:
     """Retrieve all keyspace properties.
@@ -317,6 +340,7 @@ def get_keyspace_configs(connection: dict) -> dict:
         keyspace_configs.append(keyspace)
 
     return {"keyspaces": keyspace_configs}
+
 
 def get_table_configs(connection: dict, keyspace_name: str,
                       drop_ids: bool) -> dict:
@@ -353,6 +377,7 @@ def get_table_configs(connection: dict, keyspace_name: str,
 
     return table_configs
 
+
 def get_current_config(connection: dict, drop_ids: bool = False) -> dict:
     """Retrieve the current config from the Cassandra instance.
 
@@ -365,15 +390,16 @@ def get_current_config(connection: dict, drop_ids: bool = False) -> dict:
     keyspaces = get_keyspace_configs(connection)
 
     for keyspace in keyspaces.get("keyspaces", []):
-        keyspace["tables"] = get_table_configs(connection, \
-            keyspace.get("name"), drop_ids)
+        keyspace["tables"] = get_table_configs(connection,
+                                               keyspace.get("name"), drop_ids)
 
     return keyspaces
+
 
 def main():
     """ Main function
     """
-    local_connection = get_local_connection_settings()
+    local_connection = get_connection_settings()
     for keyspace in get_current_config(local_connection).get("keyspaces", []):
         print("\nKeyspace : {}".format(keyspace.get("name", "")))
         print("- durable_writes : {}".format(keyspace.get("name", "")))
