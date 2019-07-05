@@ -1,6 +1,7 @@
-#pylint: disable = missing-docstring, broad-except
+# pylint: disable = missing-docstring, broad-except
 """ Helper functions
 """
+import configparser
 import json
 import logging
 import os
@@ -12,6 +13,8 @@ import yaml
 
 
 DEFAULT_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+DEFAULT_RCFILE = "~/.cassandra/cqlshrc"
+
 
 def setup_logging(log_file: str = "", log_level=logging.DEBUG) -> None:
     """Apply log format, set level, and add color to root logger
@@ -20,8 +23,8 @@ def setup_logging(log_file: str = "", log_level=logging.DEBUG) -> None:
         log_file:  optional name of log file
         log_level: log level defaults to DEBUG
     """
-    log_file = os.path.join(get_app_folder(), log_file if log_file else \
-        get_timestamped_filename("tp", ".log"))
+    log_file = os.path.join(get_app_folder(), log_file if log_file else
+                            get_timestamped_filename("tp", ".log"))
 
     logging.basicConfig(format=DEFAULT_LOG_FORMAT,
                         handlers=[logging.FileHandler(log_file)],
@@ -44,6 +47,7 @@ def setup_logging(log_file: str = "", log_level=logging.DEBUG) -> None:
         logging.CRITICAL, "\033[41m%s\033[0m" %
         logging.getLevelName(logging.CRITICAL))
 
+
 def get_timestamped_filename(prefix: str = "", ext: str = "") -> str:
     """ Create a timestamped filename with custom prefix and
         extension
@@ -59,6 +63,7 @@ def get_timestamped_filename(prefix: str = "", ext: str = "") -> str:
     new_ext = ext if "." in ext else "." + ext
     return "{}{}{}".format(new_prefix, time.strftime("%Y%m%d-%H%M%S"), new_ext)
 
+
 def get_app_folder() -> str:
     """Return application folder path
 
@@ -68,6 +73,7 @@ def get_app_folder() -> str:
     script_dir = os.path.dirname(os.path.realpath(__file__))
 
     return os.path.abspath(os.path.join(script_dir, os.pardir))
+
 
 def load_file(filename: str, loader, encoding: str = "utf-8"):
     """Load a structured text file
@@ -98,6 +104,7 @@ def load_file(filename: str, loader, encoding: str = "utf-8"):
 
     return content
 
+
 def write_file(filename: str, data: dict, overwrite: bool, writer,
                encoding: str = "utf-8", **options) -> bool:
     """Write a structured text file
@@ -126,6 +133,7 @@ def write_file(filename: str, data: dict, overwrite: bool, writer,
 
     return False
 
+
 def load_yaml(filename: str) -> typing.Optional[dict]:
     """Load a YAML config file
 
@@ -135,6 +143,7 @@ def load_yaml(filename: str) -> typing.Optional[dict]:
         A dict or None.
     """
     return load_file(filename, yaml.safe_load)
+
 
 def write_yaml(filename: str, data: dict, overwrite: bool = False) -> bool:
     """Write a YAML config file
@@ -148,6 +157,7 @@ def write_yaml(filename: str, data: dict, overwrite: bool = False) -> bool:
     return write_file(filename, data, overwrite, yaml.dump,
                       default_flow_style=False)
 
+
 def load_json(filename: str) -> typing.Optional[dict]:
     """Load a JSON file.
 
@@ -157,6 +167,7 @@ def load_json(filename: str) -> typing.Optional[dict]:
         A dict or None.
     """
     return load_file(filename, json.load)
+
 
 def validate_schema(schema: dict, data: dict) -> bool:
     """Validate data against jsonschema.
@@ -181,6 +192,7 @@ def validate_schema(schema: dict, data: dict) -> bool:
 
     return False
 
+
 def find_by_value(dict_list: list, key: str, value, default_value=None):
     """Search list of dictionaries by value and return first match
 
@@ -201,3 +213,15 @@ def find_by_value(dict_list: list, key: str, value, default_value=None):
             return list_item
 
     return default_value
+
+
+def load_rconfig(filename: str = DEFAULT_RCFILE) -> configparser.ConfigParser:
+    """ Load cqlshrc file
+    """
+    full_rc_filename = os.path.expanduser(filename)
+    if os.path.isfile(full_rc_filename):
+        config = configparser.ConfigParser()
+        with open(full_rc_filename, "r") as rc_file:
+            config.read_file(rc_file)
+
+    return config

@@ -129,8 +129,9 @@ def generate_alter_table_statement(keyspace_name: str,
                     param_templ = "{} = {}"
                 else:
                     param_templ = "{} = '{}'"
-            tbl_stmts += param_templ.format(prop_name, prop_value)
-            tbl_stmts += ";"
+                prop_change = param_templ.format(prop_name, prop_value)
+                tbl_stmt += prop_change
+            tbl_stmts += tbl_stmt + ";"
 
     return tbl_stmts if isinstance(tbl_stmts, str) and "WITH " in tbl_stmts \
         else ""

@@ -1,8 +1,7 @@
-# pylint: disable=too-many-arguments, too-many-branches
+# pylint: disable=too-many-arguments, too-many-branches, too-many-locals
 """ Database interface
 """
 import logging
-# import os
 import ssl
 
 import cassandra
@@ -11,6 +10,8 @@ import cassandra.cluster
 import cassandra.query
 import cassandra.util
 import cassandra.policies
+
+from table_properties import utils
 
 
 def get_protocol_version(proto_version: int):
@@ -35,7 +36,7 @@ def get_connection_settings(
         use_tls: bool = False,
         client_cert_file: str = None,
         client_key_file: str = None,
-        rc_config: dict = None) -> dict:
+        rc_config_file: str = None):
     """Construct connection settings dictionary.
     Args:
         contact_points:   IP addresses or hostnames
@@ -46,7 +47,7 @@ def get_connection_settings(
         use_tls:          flag whether to use encrypted connection
         client_cert_file: location of client certificate
         client_key_file:  location of client key
-        rc_config:        config dictionary
+        rc_config_file:   rcconfig filename
     Returns:
         Connection settings dictionary.
     """
@@ -55,7 +56,8 @@ def get_connection_settings(
     conf_password = None
 
     # Use cqlshrc values if present
-    if rc_config:
+    if rc_config_file:
+        rc_config = utils.load_rconfig(rc_config_file)
         if rc_config["connection"]["hostname"]:
             params["contact_points"] = rc_config["connection"]["hostname"]
 

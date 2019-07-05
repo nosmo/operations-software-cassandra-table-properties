@@ -2,14 +2,11 @@
 """ CLI interface class
 """
 import argparse
-import configparser
 import logging
 import os
 import sys
 
 import table_properties as tp
-
-DEFAULT_RCFILE = "~/.cassandra/cqlshrc"
 
 
 class TablePropertiesCli():
@@ -151,7 +148,6 @@ class TablePropertiesCli():
         """Execute applicaton
         """
         config_filename = None
-        config = None
 
         # Load the desired configuration from file
         self.args = TablePropertiesCli.get_arg_parser().parse_args(args)
@@ -161,15 +157,8 @@ class TablePropertiesCli():
 
         try:
             if self.args.dump_file or self.args.config_filename:
-                if not self.args.skip_rc:
-                    rc_filename = self.args.rc_file if self.args.rc_file \
-                        else DEFAULT_RCFILE
-
-                    full_rc_filename = os.path.expanduser(rc_filename)
-                    if os.path.isfile(full_rc_filename):
-                        config = configparser.ConfigParser()
-                        with open(full_rc_filename, "r") as rc_file:
-                            config.read_file(rc_file)
+                rc_filename = self.args.rc_file if not self.args.skip_rc \
+                    else None
 
                 # Construct the connection parameters
                 conn = tp.db.get_connection_settings(
@@ -181,7 +170,7 @@ class TablePropertiesCli():
                     use_tls=self.args.use_tls,
                     client_cert_file=self.args.client_cert_file,
                     client_key_file=self.args.client_key_file,
-                    rc_config=config
+                    rc_config_file=rc_filename
                     )
 
                 # Read current configuration from database

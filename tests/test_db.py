@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring, invalid-name, no-self-use
 import table_properties.db as db
 
+
 # pylint: disable=too-few-public-methods
 class TestDb():
     def test_ConvertValue(self):

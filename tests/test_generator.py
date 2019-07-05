@@ -1,12 +1,11 @@
 # pylint: disable=missing-docstring, no-self-use
 import copy
 
-import pytest
+# import pytest
 
 import table_properties as tp
 
 
-@pytest.mark.skip(reason="Configs need to be updated")
 class TestGenerator:
     def test_excalibur_increase_replicas(self, current_config):
         # Load the YAML

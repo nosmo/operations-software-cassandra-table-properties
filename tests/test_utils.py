@@ -4,9 +4,6 @@ import logging
 import os
 import tempfile
 
-import jsonschema
-import pytest
-
 import table_properties.utils as util
 
 
@@ -49,16 +46,6 @@ class TestInputOutput():
             os.remove(tmp_filename)
         except Exception as ex:
             logging.error(ex)
-
-    @pytest.mark.skip(reason="Validation no longer supported")
-    def test_read_config_jsonschema(self):
-        config_schema = util.load_json(("./schemas/config.json"))
-        assert config_schema is not None
-        config_data = \
-            util.load_yaml("./tests/configs/excalibur_unchanged.yaml")
-        result = \
-            jsonschema.Draft7Validator(config_schema).is_valid(config_data)
-        assert result
 
     def test_app_path(self):
         assert util.get_app_folder() == os.path.abspath(".")
