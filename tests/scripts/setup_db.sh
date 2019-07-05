@@ -5,12 +5,19 @@ die() {
     exit 1 
 }
 
+print() {
+    [ ! $silent ] && echo $1
+}
+
 ! [[ -x $(command -v cqlsh) ]] && die "cqlsh must be installed"
 
 SCHEMA_DIR=$(pwd)/tests/cql
 
 [[ ! -d $SCHEMA_DIR ]] && die "Cannot locate create scripts"
 
-echo "Running schema creation scripts..."
+silent=false
+[[ $# -gt 0 && $1 == "--silent" ]] && silent=true
+
+print "Running schema creation scripts..."
 find $SCHEMA_DIR -name 'create_*.cql' -exec cat {} \; | cqlsh
-echo "Done."
+print "Done."

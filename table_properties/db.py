@@ -1,35 +1,108 @@
-#pylint: disable = c-extension-no-member, fixme
+#pylint: disable = c-extension-no-member
 """ Database interface
 """
 import logging
+import os
+import ssl
 
+import cassandra
+import cassandra.auth
 import cassandra.cluster
 import cassandra.query
 import cassandra.util
 import cassandra.policies
 
-DEFAULT_PORT = 9042
+def get_protocol_version(proto_version: int):
+    d = { 
+            "1": cassandra.ProtocolVersion.V1,
+            "2": cassandra.ProtocolVersion.V2,
+            "3": cassandra.ProtocolVersion.V3,
+            "4": cassandra.ProtocolVersion.V4,
+            "5": cassandra.ProtocolVersion.V5
+        }
+    return d.get(proto_version, cassandra.ProtocolVersion.V2)
 
-def get_default_connection() -> dict:
-    """Get default connection parameters.
-
+def get_connection_settings(
+                   contact_points: list = None,
+                   port: int = None,
+                   protocol_version = None,
+                   username: str = None,
+                   password: str = None,
+                   use_tls: bool = False,
+                   client_cert_file: str = None,
+                   client_key_file: str = None,
+                   rc_config: dict = None) -> dict:
+    """Construct connection settings dictionary.
+    Args:
+        contact_points:   IP addresses or hostnames
+        port:             port number
+        protocol_version: protocol version number
+        username:         user name
+        password:         password
+        use_tls:          flag whether to use encrypted connection
+        client_cert_file: location of client certificate
+        client_key_file:  location of client key
+        rc_config:        config dictionary
     Returns:
         Connection settings dictionary.
     """
-    # TODO: Do we need a config or CLI arguments for this? What about LBP?
-    return get_local_connection()
+    params = dict()
+    conf_username = None
+    conf_password = None
 
-def get_local_connection() -> dict:
-    """Return local connection parameters.
+    # Use cqlshrc values if present
+    if rc_config:
+        if rc_config["connection"]["hostname"]:
+            params["contact_points"] = rc_config["connection"]["hostname"]
 
-    Returns:
-        Local connection settings dictionary.
-    """
-    return {
-        "hosts": ["localhost"],
-        "port": DEFAULT_PORT,
-        "load_balancing_policy" : cassandra.policies.RoundRobinPolicy()
-    }
+        if rc_config["connection"]["port"]:
+            try:
+                params["port"] = int(rc_config["connection"]["port"])
+            except ValueError:
+                pass
+
+        if rc_config["connection"]["ssl"]:
+            # use_tls is false by default. Override if defined in rc
+            use_tls = rc_config["connection"]["ssl"]
+
+        conf_username = rc_config["authentication"]["username"]
+        conf_password = rc_config["authentication"]["password"]
+
+    if contact_points:
+        params["contact_points"] = contact_points
+        params["load_balancing_policy"] = \
+            cassandra.policies.WhiteListRoundRobinPolicy([contact_points])
+
+    if isinstance(port, int):
+        params["port"] = port
+
+    if protocol_version:
+        params["protocol_version"] = protocol_version
+
+    if (conf_username or username) and (conf_password or password):
+        conn_user = username if username else conf_username
+        conn_pwrd = password if password else conf_password
+
+        params["auth_provider"] = \
+            cassandra.auth.PlainTextAuthProvider(conn_user, conn_pwrd)
+
+        if not protocol_version:
+            # Auth provider requires at least protocol version 2
+            params["protocol_version"] = cassandra.ProtocolVersion.V2
+        else:
+            params["protocol_version"] = get_protocol_version(protocol_version)
+
+    if use_tls:
+        if client_cert_file and client_key_file:
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+            ssl_context.load_cert_chain(
+                certfile=client_cert_file,
+                keyfile=client_key_file)
+            params["ssl_context"] = ssl_context
+        else:
+            params["ssl_context"] = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+
+    return params
 
 def get_class_name(full_class_name: str) -> str:
     """Return actual class name
@@ -116,7 +189,7 @@ def get_replication_settings(replication: dict) -> dict:
 
     return repl_config
 
-def get_subconfig_settings(subconfig):
+def convert_mapped_props(subconfig):
     """Convert mapped properties
 
     Args:
@@ -137,6 +210,33 @@ def get_subconfig_settings(subconfig):
 
     return settings
 
+def get_cluster(connection_settings: dict) -> cassandra.cluster.Cluster:
+    """Create and return a cluster instance.
+
+    Args:
+        connection_settings: Settings dictionary
+    Returns:
+        Cluster instance
+    """
+
+    cluster = cassandra.cluster.Cluster()
+
+    if connection_settings:
+        contact_points = connection_settings.get("contact_points")
+        if contact_points and isinstance(contact_points, list):
+            cluster.contact_points = contact_points
+        if connection_settings.get("port", 0) > 0:
+            cluster.port = connection_settings.get("port")
+        if connection_settings.get("load_balancing_policy"):
+            cluster.load_balancing_policy = \
+                connection_settings.get("load_balancing_policy")
+        if connection_settings.get("auth_provider"):
+            cluster.auth_provider = connection_settings.get("auth_provider")
+        if connection_settings.get("ssl_context"):
+            cluster.ssl_context = connection_settings.get("ssl_context")
+
+    return cluster
+
 def exec_query(connection: dict, query_stmt: str) -> list:
     """Execute Cassandra query
 
@@ -148,12 +248,7 @@ def exec_query(connection: dict, query_stmt: str) -> list:
         List of rows or empty list
     """
     try:
-        cluster = cassandra.cluster.Cluster(
-            connection.get("hosts", get_local_connection()["hosts"]),
-            port=connection.get("port", get_local_connection()["port"]),
-            load_balancing_policy=connection.get("load_balancing_policy", \
-                get_local_connection()["load_balancing_policy"])
-        )
+        cluster = get_cluster(connection)
 
         with cluster.connect("system_schema", wait_for_all_pools=True) as session:
             session.row_factory = cassandra.query.ordered_dict_factory
@@ -179,17 +274,14 @@ def check_connection(connection: dict):
         True if connection was successful. False otherwise
     """
     try:
-        cluster = cassandra.cluster.Cluster(
-            connection.get("hosts", get_local_connection()["hosts"]),
-            port=connection.get("port", get_local_connection()["port"]),
-            load_balancing_policy=connection.get("load_balancing_policy", \
-                get_local_connection()["load_balancing_policy"])
-        )
+        cluster = get_cluster(connection)
 
         with cluster.connect():
             return True
     except cassandra.cluster.NoHostAvailable as nhex:
-        logging.exception(nhex)
+        host = connection.get("hostname", "127.0.0.1")
+        port = connection.get("port", "9042")
+        print("\nFailed to connect to {}:{}".format(host, port))
     except Exception as ex:
         logging.exception(ex)
         raise
@@ -216,8 +308,11 @@ def get_keyspace_configs(connection: dict) -> dict:
         keyspace = {}
         for key, val in row.items():
             mapped_key = key_mapper(key)
-            if mapped_key == "replication":
-                val = get_replication_settings(val)
+            if isinstance(val, cassandra.util.OrderedMapSerializedKey):
+                val = convert_mapped_props(val)
+            elif key == "flags":
+                val = list(val) if isinstance(val, cassandra.util.SortedSet) \
+                                else val
             keyspace[mapped_key] = val
         keyspace_configs.append(keyspace)
 
@@ -246,12 +341,10 @@ def get_table_configs(connection: dict, keyspace_name: str,
             if key == "keyspace_name" or (key == "id" and drop_ids):
                 continue
             elif isinstance(val, cassandra.util.OrderedMapSerializedKey):
-                if key == "replication":
-                    val = get_replication_settings(val)
-                else:
-                    val = get_subconfig_settings(val)
+                val = convert_mapped_props(val)
             elif key == "flags":
-                val = list(val) if isinstance(val, cassandra.util.SortedSet) else val
+                val = list(val) if isinstance(val, cassandra.util.SortedSet) \
+                                else val
             elif key == "id":
                 val = str(val)
             tbl[key_mapper(key)] = val
@@ -260,7 +353,7 @@ def get_table_configs(connection: dict, keyspace_name: str,
 
     return table_configs
 
-def get_current_config(connection: dict = None, drop_ids: bool = False) -> dict:
+def get_current_config(connection: dict, drop_ids: bool = False) -> dict:
     """Retrieve the current config from the Cassandra instance.
 
     Args:
@@ -269,9 +362,6 @@ def get_current_config(connection: dict = None, drop_ids: bool = False) -> dict:
     Returns:
         Dictionary with keyspace and table properties.
     """
-    if not connection:
-        connection = get_local_connection()
-
     keyspaces = get_keyspace_configs(connection)
 
     for keyspace in keyspaces.get("keyspaces", []):
@@ -283,7 +373,7 @@ def get_current_config(connection: dict = None, drop_ids: bool = False) -> dict:
 def main():
     """ Main function
     """
-    local_connection = get_local_connection()
+    local_connection = get_local_connection_settings()
     for keyspace in get_current_config(local_connection).get("keyspaces", []):
         print("\nKeyspace : {}".format(keyspace.get("name", "")))
         print("- durable_writes : {}".format(keyspace.get("name", "")))

@@ -3,11 +3,8 @@ keyspaces:
   name: excalibur
   replication:
     class: NetworkTopologyStrategy
-    data_centers:
-    - name: data_center1
-      replication_factor: 3
-    - name: data_center2
-      replication_factor: 3
+    data_center1: 3
+    data_center2: 3
   tables:
   - bloom_filter_fp_chance: 0.01
     caching:

@@ -2,11 +2,14 @@
 """ CLI interface class
 """
 import argparse
+import configparser
 import logging
 import os
 import sys
 
 import table_properties as tp
+
+DEFAULT_RCFILE = "~/.cassandra/cqlshrc"
 
 class TablePropertiesCli():
     """Command-line interface class
@@ -23,22 +26,33 @@ class TablePropertiesCli():
             argparse.ArgumentParser
         """
         parser = argparse.ArgumentParser(prog=tp.PROG_NAME, \
-            description="""Compare actual Cassandra keyspace and table
-                           configuration against desired configuration
-                           and create ALTER statements to change the current
-                           property values to the desired ones.""")
+            description="Compare actual Cassandra keyspace and table "
+                        "properties to desired properties "
+                        "defined in a YAML file and create ALTER KEYSPACE "
+                        "and ALTER TABLE statements for properties that "
+                        "differ.",
+            formatter_class=lambda prog:
+                argparse.RawTextHelpFormatter(prog, width=130))
 
         parser.add_argument(metavar="<filename>",
                             nargs="?",
                             dest="config_filename",
                             help="Desired configuration YAML file")
 
-        parser.add_argument("-f", "--force",
-                            dest="force_overwrite",
-                            help="Overwrite dump file if it exists.",
-                            action="store_true")
+        parser.add_argument("-c",
+                            "--contactpoint",
+                            metavar="<ip 1>[,...,<ip n>]",
+                            dest="host_ip",
+                            help="Host IP address(es) or name(s)." +
+                                 "Default: localhost",
+                            required=False)
 
-        parser.set_defaults(force_overwrite=False)
+        parser.add_argument("-C",
+                            "--clientcert",
+                            metavar="<filename>",
+                            dest="client_cert_file",
+                            help="Client cert file name.",
+                            required=False)
 
         parser.add_argument("-d",
                             "--dump",
@@ -47,29 +61,130 @@ class TablePropertiesCli():
                             help="Dump current configuration settings to file",
                             required=False)
 
+        parser.add_argument("-f", "--force",
+                            dest="force_overwrite",
+                            help="Overwrite dump file if it exists.",
+                            action="store_true")
+
+        parser.add_argument("-k",
+                            "--clientkey",
+                            metavar="<filename>",
+                            dest="client_key_file",
+                            help="Client key file name.",
+                            required=False)
+
+        parser.add_argument("-l",
+                            "--log",
+                            metavar="<filename>",
+                            dest="log_file",
+                            help="Log file name. "
+                                 "Default: tp_YYYYMMDD-HHMMSS.log",
+                            required=False)
+
+        parser.add_argument("-p",
+                            "--port",
+                            type=int,
+                            metavar="<port #>",
+                            dest="host_port",
+                            help="Port number. Default: 9042",
+                            required=False)
+
+        parser.add_argument("-o",
+                            "--protocolversion",
+                            type=int,
+                            choices=range(1,5),
+                            default=2,
+                            metavar="<protocol version>",
+                            dest="protocol_version",
+                            help="Cassandra driver protocol version (1-5)."
+                                 "Default: 2",
+                            required=False)
+
+        parser.add_argument("-P",
+                            "--password",
+                            metavar="<password>",
+                            dest="password",
+                            help="Password for plain text authentication.",
+                            required=False)
+
+        parser.add_argument("-s", "--skiprc",
+                            dest="skip_rc",
+                            help="Ignore existing cqlshrc file.",
+                            action="store_false")
+
+        parser.add_argument("-r",
+                            "--rcfile",
+                            metavar="<filename>",
+                            dest="rc_file",
+                            help="cqlrc file name. "
+                                 "Default: ~/.cassandra/cqlshrc",
+                            required=False)
+
+        parser.add_argument("-t", "--tls",
+                            dest="use_tls",
+                            help="Use TLS encryption for client server "
+                                 "communication.",
+                            action="store_true")
+
+        parser.add_argument("-u",
+                            "--username",
+                            metavar="<user name>",
+                            dest="username",
+                            help="User name for plain text authentication.",
+                            required=False)
+
         parser.add_argument("-v",
                             "--version",
                             action="version",
                             version="{} {}".format(tp.PROG_NAME, \
                                 tp.PROG_VERSION))
 
+        # Set defaults
+        parser.set_defaults(force_overwrite=False, use_tls=False, \
+            skip_rc=False, rc_file="~/.cassandra/cqlshrc")
+
         return parser
 
     def execute(self, args: list = []) -> None:
         """Execute applicaton
         """
-        # Modify root logger settings
-        tp.utils.setup_logging()
-
         config_filename = None
-        app_dir = tp.utils.get_app_folder()
 
         # Load the desired configuration from file
         self.args = TablePropertiesCli.get_arg_parser().parse_args(args)
 
+        # Modify root logger settings
+        tp.utils.setup_logging(self.args.log_file)
+
         try:
+            if not self.args.skip_rc:
+                rc_filename = self.args.rc_file if self.args.rc_file \
+                    else DEFAULT_RCFILE
+
+                full_rc_filename = os.path.expanduser(rc_filename)
+                if not (os.path.exists(full_rc_filename) \
+                    and os.path.isfile(full_rc_filename)):
+                    raise Exception("cqlshrc not found")
+
+                config = configparser.ConfigParser()
+                with open(full_rc_filename, "r") as f:
+                    config.read_file(f)
+
+            # Construct the connection parameters
+            conn = tp.db.get_connection_settings(
+                contact_points=self.args.host_ip,
+                port=self.args.host_port,
+                protocol_version=self.args.protocol_version,
+                username=self.args.username,
+                password=self.args.password,
+                use_tls=self.args.use_tls,
+                client_cert_file=self.args.client_cert_file,
+                client_key_file=self.args.client_key_file,
+                rc_config = config
+                )
+
             # Read current configuration from database
-            current_config = tp.db.get_current_config()
+            current_config = tp.db.get_current_config(conn)
 
             if self.args.dump_file:
                 try:
@@ -82,12 +197,6 @@ class TablePropertiesCli():
                 config_filename = self.args.config_filename
                 logging.info("Reading config from '%s'", config_filename)
                 desired_config = tp.utils.load_yaml(config_filename)
-
-                config_schema_file = os.path.join(app_dir, "schemas", "config.json")
-                config_schema = tp.utils.load_json(config_schema_file)
-                if not tp.utils.validate_schema(config_schema, desired_config):
-                    print("""Schema validation of the desired config file failed.\n
-                            See log for more information.""")
 
                 # Generate ALTER statements for Keyspaces and Tables
                 alter_statements = tp.generator. \

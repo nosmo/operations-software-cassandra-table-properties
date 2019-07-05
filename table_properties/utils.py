@@ -136,7 +136,6 @@ def load_yaml(filename: str) -> typing.Optional[dict]:
     """
     return load_file(filename, yaml.safe_load)
 
-
 def write_yaml(filename: str, data: dict, overwrite: bool = False) -> bool:
     """Write a YAML config file
 

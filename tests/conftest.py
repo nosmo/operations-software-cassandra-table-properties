@@ -12,10 +12,10 @@ def current_config():
         Test if a local Cassandra instance is available for testing. If not
         use mock data to run tests.
     """
-    conn_params = db.get_local_connection()
+    conn_params = db.get_connection_settings()
     if db.check_connection(conn_params):
-        subprocess.call("./tests/clean_db.sh")
-        subprocess.call("./tests/setup_db.sh")
+        subprocess.call(["./tests/scripts/clean_db.sh", "--silent"])
+        subprocess.call(["./tests/scripts/setup_db.sh", "--silent"])
 
         return db.get_current_config(conn_params, True)
     else:
@@ -25,7 +25,7 @@ def current_config():
 
 
 def pytest_sessionfinish(session, exitstatus):
-    conn_params = db.get_local_connection()
+    conn_params = db.get_connection_settings()
     # teardown
     if db.check_connection(conn_params):
-        subprocess.call("./tests/clean_db.sh")
+        subprocess.call(["./tests/scripts/clean_db.sh", "--silent"])

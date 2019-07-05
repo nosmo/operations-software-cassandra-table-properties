@@ -43,6 +43,8 @@ class TestInputOutput():
             os.remove(tmp_filename)
         except Exception as ex:
             logging.error(ex)
+
+    @pytest.mark.skip(reason="Validation no longer supported")
     def test_read_config_jsonschema(self):
         config_schema = util.load_json(("./schemas/config.json"))
         assert config_schema is not None

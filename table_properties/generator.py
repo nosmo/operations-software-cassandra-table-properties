@@ -70,9 +70,6 @@ def generate_alter_keyspace_statement(keyspace_name: str, \
     Returns:
         CQL statement with changed properties or empty string
     """
-    current_replication = current_keyspace.pop("replication", {})
-    desired_replication = desired_keyspace.pop("replication", {})
-
     stmt = "ALTER KEYSPACE {}".format(keyspace_name)
 
     changes = compare_values(current_keyspace, desired_keyspace)
@@ -81,39 +78,7 @@ def generate_alter_keyspace_statement(keyspace_name: str, \
             stmt += connect_statments(stmt)
             stmt += "{} = {}".format(change["property"], change["desired"])
 
-    repl_changes = compare_values(current_replication, desired_replication)
-
-    if repl_changes:
-        stmt += connect_statments(stmt)
-        stmt += "replication = {"
-
-        repl_class = desired_replication.get("class", None)
-        if not repl_class:
-            raise ValueError("Replication class must be provided")
-
-        stmt += "'class': '{}'".format(repl_class)
-
-        if desired_replication.get("replication_factor", None):
-            try:
-                repl_factor = \
-                    int(desired_replication.get("replication_factor"))
-            except ValueError:
-                repl_factor = 1
-
-            stmt += ", 'replication_factor': {} ".format(repl_factor)
-
-        desired_dcs = desired_replication.pop("data_centers", {})
-
-        if repl_class == "NetworkTopologyStrategy" and desired_dcs:
-            # Enumerate data center replication settings
-            if isinstance(desired_dcs, list):
-                for data_center in desired_dcs:
-                    stmt = stmt + ",'{}': '{}'" \
-                        .format(data_center["name"], data_center["replication_factor"])
-
-        stmt += "};\n"
-
-    return stmt if "WITH " in stmt else ""
+    return stmt + ";\n" if "WITH " in stmt else ""
 
 def generate_alter_table_statement(keyspace_name: str, \
     current_tables: dict, desired_tables: dict) -> str:
@@ -202,8 +167,10 @@ def generate_alter_statements(current_config: dict, desired_config: dict)->str:
     return stmt
 
 def main():
+    conn_params = db.get_connection_settings()
+
     # Load keyspaces properties and table properties from current instance
-    current_config = db.get_current_config()
+    current_config = db.get_current_config(conn_params)
 
     # Load desired keyspace and table properties
     desired_config = utils.load_yaml("./configs/excalibur.yaml")
