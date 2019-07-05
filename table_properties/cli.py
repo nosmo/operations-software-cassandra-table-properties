@@ -162,13 +162,10 @@ class TablePropertiesCli():
                     else DEFAULT_RCFILE
 
                 full_rc_filename = os.path.expanduser(rc_filename)
-                if not (os.path.exists(full_rc_filename) \
-                    and os.path.isfile(full_rc_filename)):
-                    raise Exception("cqlshrc not found")
-
-                config = configparser.ConfigParser()
-                with open(full_rc_filename, "r") as f:
-                    config.read_file(f)
+                if os.path.isfile(full_rc_filename):
+                    config = configparser.ConfigParser()
+                    with open(full_rc_filename, "r") as f:
+                        config.read_file(f)
 
             # Construct the connection parameters
             conn = tp.db.get_connection_settings(
