@@ -12,8 +12,10 @@ before_install:
   - sudo rm -rf /var/lib/cassandra/*
   - wget http://www.us.apache.org/dist/cassandra/3.11.4/apache-cassandra-3.11.4-bin.tar.gz && tar -xvzf apache-cassandra-3.11.4-bin.tar.gz
   - ./apache-cassandra-3.11.4/bin/cqlsh --version
+  - sudo mkdir ./apache-cassandra-3.11.4/logs && sudo chmod -R 777 ./apache-cassandra-3.11.4/logs
   - sudo sh ./apache-cassandra-3.11.4/bin/cassandra -R
   - sleep 20
+  - cqlsh --debug -e "show version;"
 
 install:
   - pip install tox codecov

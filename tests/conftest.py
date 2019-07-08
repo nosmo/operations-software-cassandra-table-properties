@@ -1,5 +1,4 @@
 # pylint: disable=missing-docstring, invalid-name
-import os
 import subprocess
 
 import pytest
@@ -15,11 +14,7 @@ def current_config():
         Test if a local Cassandra instance is available for testing. If not
         use mock data to run tests.
     """
-    if os.path.isfile("tests/setup/cqlshrc"):
-        conn_params = \
-            db.get_connection_settings(rc_config_file="tests/setup/cqlshrc")
-    else:
-        conn_params = db.get_connection_settings()
+    conn_params = db.get_connection_settings()
 
     if db.check_connection(conn_params):
         subprocess.call(["./tests/scripts/clean_db.sh", "--silent"])
@@ -34,6 +29,7 @@ def current_config():
 
 def pytest_sessionfinish():
     conn_params = db.get_connection_settings()
+
     # teardown
     if db.check_connection(conn_params):
         subprocess.call(["./tests/scripts/clean_db.sh", "--silent"])

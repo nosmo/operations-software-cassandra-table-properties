@@ -6,6 +6,15 @@ import copy
 import table_properties as tp
 
 
+def compare_statments(actual, expected):
+    act_stmt_arr = actual.split(";")
+    exp_stmt_arr = expected.split(";")
+    assert len(act_stmt_arr) == len(exp_stmt_arr)
+    if len(act_stmt_arr) == len(exp_stmt_arr):
+        for act, exp in zip(act_stmt_arr, exp_stmt_arr):
+            assert act == exp
+
+
 class TestGenerator:
     def test_excalibur_increase_replicas(self, current_config):
         # Load the YAML
@@ -17,11 +26,9 @@ class TestGenerator:
             copy.deepcopy(current_config),
             desired_config)
 
-        expected_stmt = "ALTER KEYSPACE excalibur WITH replication = " \
-            "{'class': 'NetworkTopologyStrategy', 'data_center1': 4, " \
-            "'data_center2': 5};\n"
         assert stmt is not None
-        assert stmt == expected_stmt
+        assert "'data_center1': 4" in stmt
+        assert "'data_center2': 5" in stmt
 
     def test_excalibur_unchanged(self, current_config):
         # Load the YAML
@@ -54,4 +61,4 @@ class TestGenerator:
             "WITH comment = 'Test comment 2';"
         assert stmt is not None
         assert stmt != ""
-        assert stmt == expected_stmt
+        compare_statments(stmt, expected_stmt)

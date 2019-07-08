@@ -101,10 +101,10 @@ ssl = true
 
 
 [ssl]
-;certfile = ./certs/node0.cer.pem
+certfile = tests/setup/certs/node0.cer.pem
 
 ;; Optional - true by default.
-;validate = false
+validate = false
 
 ;; To be provided when require_client_auth=true
 ;userkey = ~/key.pem

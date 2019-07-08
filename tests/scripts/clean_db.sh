@@ -15,11 +15,13 @@ print() {
 silent=false
 [[ $# -gt 0 && $1 == "--silent" ]] && silent=true
 
+CQLSH="cqlsh"
+
 print "Enumerating namespaces..."
-keyspaces=$(echo desc keyspaces | cqlsh | xargs -n1 echo | grep -v ^system)
+keyspaces=$(echo desc keyspaces | $CQLSH | xargs -n1 echo | grep -v ^system)
 for ks in $keyspaces; do
-    echo "Dropping '$ks'..."
-    echo "drop keyspace \"$ks\";" | cqlsh
+    print "Dropping '$ks'..."
+    echo "drop keyspace \"$ks\";" | $CQLSH
 done
 
 print "Running cleanup.."
