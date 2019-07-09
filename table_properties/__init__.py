@@ -12,4 +12,4 @@ utils = utils
 generator = generator
 
 PROG_NAME = "table-properties"
-PROG_VERSION = 0.1
+PROG_VERSION = 0.2

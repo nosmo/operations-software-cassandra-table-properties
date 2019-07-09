@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
+"""Main entry point
+"""
+# pylint: disable=wrong-import-position, invalid-name
 import sys
 
-ver_major = sys.version_info[0]
-ver_minor = sys.version_info[1]
+PY_VER_MAJOR = sys.version_info[0]
+PY_VER_MINOR = sys.version_info[1]
 
-if ver_major < 3 or (ver_major == 3 and ver_minor < 4):
+if PY_VER_MAJOR < 3 or (PY_VER_MAJOR == 3 and PY_VER_MINOR < 4):
     print("This app requires Python 3.4 or higher. Version used : {}.{}"
-        .format(ver_major,ver_minor))
+          .format(PY_VER_MAJOR, PY_VER_MINOR))
     exit(1)
 
-from table_properties import cli
+from table_properties import cli  # noqa
 cli.main()

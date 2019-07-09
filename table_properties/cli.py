@@ -157,8 +157,7 @@ class TablePropertiesCli():
 
         try:
             if self.args.dump_file or self.args.config_filename:
-                rc_filename = self.args.rc_file if not self.args.skip_rc \
-                    else None
+                rc_filename = None if self.args.skip_rc else self.args.rc_file
 
                 # Construct the connection parameters
                 conn = tp.db.get_connection_settings(
