@@ -8,7 +8,6 @@ import os
 import time
 import typing
 
-import jsonschema
 import yaml
 
 
@@ -167,30 +166,6 @@ def load_json(filename: str) -> typing.Optional[dict]:
         A dict or None.
     """
     return load_file(filename, json.load)
-
-
-def validate_schema(schema: dict, data: dict) -> bool:
-    """Validate data against jsonschema.
-
-    Args:
-        schema: JSON Schema definition
-        data: JSON data to be validated
-
-    Returns:
-        True if valid. False otherwise.
-    """
-    validator = None
-    try:
-        validator = jsonschema.Draft7Validator(schema)
-        validator.validate(data)
-        return True
-    except jsonschema.ValidationError as val_err:
-        logging.exception(val_err)
-        for error in sorted(validator.iter_errors(data), key=str):
-            logging.debug(error.message)
-        raise Exception("Schema validation failed. See log for details.")
-
-    return False
 
 
 def find_by_value(dict_list: list, key: str, value, default_value=None):
