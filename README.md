@@ -11,20 +11,20 @@ Cassandra's DDL covers what is traditionally considered schema, but also informa
 
 ### keyspace
 
-```
+```sql
 CREATE KEYSPACE "globaldomain_T_mathoid__ng_mml" WITH replication = {'class': 'NetworkTopologyStrategy', 'codfw': '3', 'eqiad': '3'}  AND durable_writes = true;
 -- \___________________________________________/      \________________________________________________________________________________________________________/
 --                    |                                                                                   |
 --                  schema                                                                          configuration
 ```
 
-A keyspace in Cassandra is a namespace to associate tables with (similar to a database in MySQL terminology). Here, globaldomain_T_mathoid__ng_mml is the keyspace, and everything that follows the WITH is configuration pertaining to associated tables (replication, or whether or not to make use of the commitlog).
+A keyspace in Cassandra is a namespace to associate tables with (similar to a database in MySQL terminology). Here, _globaldomain_T_mathoid__ng_mml_ is the keyspace, and everything that follows the WITH is configuration pertaining to associated tables (replication, or whether or not to make use of the commitlog).
 
 It is similar with tables:
 
 ### table
 
-```
+```sql
 -- Schema ~~~~~~~~~~~~~~~
 CREATE TABLE "globaldomain_T_mathoid__ng_mml".data (
     "_domain" text,
@@ -50,7 +50,7 @@ CREATE TABLE "globaldomain_T_mathoid__ng_mml".data (
     AND speculative_retry = '99PERCENTILE';
 ```
 
-Likewise, the DDL describes both schema, and table-specific configuration. In the example above, "globaldomain_T_mathoid__ng_mml".data is the table name, followed within the parenthesis by the names and types of the attributes. This is schema, as it models the data to be stored there. Everything that follows the WITH however, is configuration.
+Likewise, the DDL describes both schema, and table-specific configuration. In the example above, _"globaldomain_T_mathoid__ng_mml".data_ is the table name, followed within the parenthesis by the names and types of the attributes. This is schema, as it models the data to be stored there. Everything that follows the WITH however, is configuration.
 
 This is an important distinction (schema v configuration), because schema is determined by the application; No change in schema makes sense without a corresponding change to the application. Configuration however is site-specific, and operational in nature; Parameters can be unique to a use-case, and updated frequently outside of any change to the application. Schema is determined by application developers, configuration by users/operators.
 
