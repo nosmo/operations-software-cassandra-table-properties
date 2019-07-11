@@ -106,7 +106,9 @@ keyspaces:
 
 ## Installation
 
-Python 3.4 or higher is required. Install the dependencies with
+Python 3.4 or higher is required. Either clone the repo or download a zipped (release) version.
+
+Install the dependencies with
 
 ```bash
 pip install -r requirements.txt
@@ -142,10 +144,10 @@ to update Cassandra's configuration.
 
 ### Changing Defaults and Using `cqlshrc`
 
-If the server connection is different from the default values, a `cqlrcsh` file can be used to provide those settings. The default file location is in `$HOME/.cassandra/cqlrcsh` but can be changed with the `-r` switch. Use `-s` to not read `cqlrcsh`.
+If the server connection is different from the default values, in addition to the CLI switches, an existing `cqlshrc` file can be used to provide those settings.
 
 ```bash
-table-properties -r <filename>
+table-properties -r <cqlshrc filename>
 ```
 
 #### Other switches
