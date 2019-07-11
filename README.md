@@ -54,8 +54,11 @@ Likewise, the DDL describes both schema, and table-specific configuration. In th
 
 This is an important distinction (schema v configuration), because schema is determined by the application; No change in schema makes sense without a corresponding change to the application. Configuration however is site-specific, and operational in nature; Parameters can be unique to a use-case, and updated frequently outside of any change to the application. Schema is determined by application developers, configuration by users/operators.
 
-<div style="margin: 16px 0;padding: 12px;border-left: 3px solid #f1c40f;background: #fdf5d4;">Unfortunately, it is colloquial to refer to the entire DDL for a keyspace and/or table as <em>schema</em>.  However, every effort is made throughput this ticket to use the term <em>schema</em> to mean only that which determines the data model, and <em>configuration</em> to refer to the corresponding operational settings.
-</div>
+---
+
+Unfortunately, it is colloquial to refer to the entire DDL for a keyspace and/or table as _schema_.  However, every effort is made throughput this ticket to use the term _schema_ to mean only that which determines the data model, and _configuration_ to refer to the corresponding operational settings.
+
+---
 
 ## Installation
 
