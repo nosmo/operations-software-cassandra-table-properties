@@ -60,6 +60,50 @@ Unfortunately, it is colloquial to refer to the entire DDL for a keyspace and/or
 
 ---
 
+### Configuration Management
+
+`table-properties` allows the user to create the YAML representation (via -d switch) of existing keyspaces and tables. When saved the configuration can be changed and then used
+as input for `table-properties` to generate the ALTER statements.
+
+#### Sample YAML Output
+
+```yaml
+keyspaces:
+- durable_writes: true
+  name: globaldomain_T_mathoid__ng_mml
+  replication:
+    class: SimpleStrategy
+    replication_factor: 1
+  tables:
+  - bloom_filter_fp_chance: 0.01
+    caching:
+      keys: ALL
+      rows_per_partition: NONE
+    cdc: null
+    comment: ''
+    compaction:
+      class: SizeTieredCompactionStrategy
+      max_threshold: 32
+      min_threshold: 4
+    compression:
+      chunk_length_in_kb: 32
+      class: LZ4Compressor
+    crc_check_chance: 1.0
+    dclocal_read_repair_chance: 0.1
+    default_time_to_live: 0
+    extensions: {}
+    flags:
+    - compound
+    gc_grace_seconds: 86400
+    id: 1de04a10-a409-11e9-94f8-6dbc19352e3a
+    max_index_interval: 2048
+    memtable_flush_period_in_ms: 0
+    min_index_interval: 128
+    name: data
+    read_repair_chance: 0.0
+    speculative_retry: 99PERCENTILE
+```
+
 ## Installation
 
 Python 3.4 or higher is required. Install the dependencies with
