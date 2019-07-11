@@ -5,6 +5,58 @@
 
 Cassandra table and keyspace configuration tool.
 
+## Overview/Motivation
+
+Cassandra's DDL covers what is traditionally considered schema, but also information that is more configuration in nature. For example, consider keyspace creation:
+
+### keyspace
+
+```
+CREATE KEYSPACE "globaldomain_T_mathoid__ng_mml" WITH replication = {'class': 'NetworkTopologyStrategy', 'codfw': '3', 'eqiad': '3'}  AND durable_writes = true;
+-- \___________________________________________/      \________________________________________________________________________________________________________/
+--                    |                                                                                   |
+--                  schema                                                                          configuration
+```
+
+A keyspace in Cassandra is a namespace to associate tables with (similar to a database in MySQL terminology). Here, globaldomain_T_mathoid__ng_mml is the keyspace, and everything that follows the WITH is configuration pertaining to associated tables (replication, or whether or not to make use of the commitlog).
+
+It is similar with tables:
+
+### table
+
+```
+-- Schema ~~~~~~~~~~~~~~~
+CREATE TABLE "globaldomain_T_mathoid__ng_mml".data (
+    "_domain" text,
+    key text,
+    headers text,
+    tid timeuuid,
+    value text,
+    PRIMARY KEY (("_domain", key))
+-- Configuration ~~~~~~~~
+) WITH bloom_filter_fp_chance = 0.01
+    AND caching = {'keys': 'ALL', 'rows_per_partition': 'NONE'}
+    AND comment = ''
+    AND compaction = {'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold': '32', 'min_threshold': '4'}
+    AND compression = {'chunk_length_in_kb': '32', 'class': 'org.apache.cassandra.io.compress.LZ4Compressor'}
+    AND crc_check_chance = 1.0
+    AND dclocal_read_repair_chance = 0.1
+    AND default_time_to_live = 0
+    AND gc_grace_seconds = 86400
+    AND max_index_interval = 2048
+    AND memtable_flush_period_in_ms = 0
+    AND min_index_interval = 128
+    AND read_repair_chance = 0.0
+    AND speculative_retry = '99PERCENTILE';
+```
+
+Likewise, the DDL describes both schema, and table-specific configuration. In the example above, "globaldomain_T_mathoid__ng_mml".data is the table name, followed within the parenthesis by the names and types of the attributes. This is schema, as it models the data to be stored there. Everything that follows the WITH however, is configuration.
+
+This is an important distinction (schema v configuration), because schema is determined by the application; No change in schema makes sense without a corresponding change to the application. Configuration however is site-specific, and operational in nature; Parameters can be unique to a use-case, and updated frequently outside of any change to the application. Schema is determined by application developers, configuration by users/operators.
+
+<div style="margin: 16px 0;padding: 12px;border-left: 3px solid #f1c40f;background: #fdf5d4;">Unfortunately, it is colloquial to refer to the entire DDL for a keyspace and/or table as <em>schema</em>.  However, every effort is made throughput this ticket to use the term <em>schema</em> to mean only that which determines the data model, and <em>configuration</em> to refer to the corresponding operational settings.
+</div>
+
 ## Installation
 
 Python 3.4 or higher is required. Install the dependencies with
