@@ -1,4 +1,4 @@
-# pylint: disable=broad-except, dangerous-default-value, unused-import
+# pylint: disable=broad-except, invalid-name
 """ CLI interface class
 """
 import argparse
@@ -15,7 +15,7 @@ class TablePropertiesCli():
     """
 
     def __init__(self):
-        self.args = None
+        self._args = None
 
     @staticmethod
     def get_arg_parser()->argparse.ArgumentParser:
@@ -97,7 +97,7 @@ class TablePropertiesCli():
                             required=False)
 
         parser.add_argument("-t", "--tls",
-                            dest="use_tls",
+                            dest="use_ssl",
                             help="Use TLS encryption for client server "
                                  "communication.",
                             action="store_true")
@@ -117,52 +117,58 @@ class TablePropertiesCli():
 
         return parser
 
-    def execute(self, args: list = []) -> None:
+    def execute(self, args: list) -> None:
         """Execute applicaton
         """
-        config_filename = None
-        rc_filename = None
         password = None
-
-        # Load the desired configuration from file
-        self.args = TablePropertiesCli.get_arg_parser().parse_args(args)
-
         log_level = os.environ.get("TP_LOG_LEVEL", tp.utils.DEFAULT_LOG_LEVEL)
 
+        parser = TablePropertiesCli.get_arg_parser()
+
+        # Load the desired configuration from file
+        self._args = parser.parse_args(args=args)
+
         # Modify root logger settings
-        tp.utils.setup_logging(self.args.log_file,
+        tp.utils.setup_logging(self._args.log_file,
                                tp.utils.get_log_level(log_level))
 
-        try:
-            if self.args.dump_config or self.args.config_filename:
-                if self.args.rc_file and os.path.isfile(self.args.rc_file):
-                    rc_filename = self.args.rc_file
+        # Get password from user if required
+        if self._args.password_reqd:
+            password = getpass.getpass(prompt="Password: ")
 
-                if self.args.password_reqd:
-                    password = getpass.getpass(prompt="Password: ")
+        config_filename = None
+        conn_params = tp.database.ConnectionParams(
+            host=self._args.host_ip,
+            port=self._args.host_port,
+            username=self._args.username,
+            password=password,
+            ssl_required=self._args.use_ssl,
+            client_cert_filename=self._args.client_cert_file,
+            client_key_filename=self._args.client_key_file)
+
+        try:
+            if self._args.dump_config or self._args.config_filename:
+                if self._args.rc_file:
+                    if not os.path.exists(self._args.rc_file):
+                        print("File '{}' not found.")
+                        sys.exit(1)
+                    conn_params = \
+                        tp.database.ConnectionParams.load_from_rcfile(
+                            self._args.rc_file)
 
                 # Construct the connection parameters
-                conn = tp.db.get_connection_settings(
-                    contact_points=self.args.host_ip,
-                    port=self.args.host_port,
-                    username=self.args.username,
-                    password=password,
-                    use_tls=self.args.use_tls,
-                    client_cert_file=self.args.client_cert_file,
-                    client_key_file=self.args.client_key_file,
-                    rc_config_file=rc_filename
-                    )
+                db = tp.database.Db(conn_params)
 
                 # Read current configuration from database
-                current_config = tp.db.get_current_config(conn)
+                current_config = db.get_current_config()
 
-                if self.args.dump_config:
+                if self._args.dump_config:
                     try:
                         print(tp.utils.format_yaml(current_config))
                     except Exception as ex:
                         logging.exception(ex)
                 else:
-                    config_filename = self.args.config_filename
+                    config_filename = self._args.config_filename
                     logging.info("Reading config from '%s'", config_filename)
                     desired_config = tp.utils.load_yaml(config_filename)
 
@@ -182,8 +188,8 @@ class TablePropertiesCli():
 def main():
     """ Main function
     """
-    tpc = TablePropertiesCli()
-    tpc.execute(args=sys.argv[1:])
+    cmd = TablePropertiesCli()
+    cmd.execute(args=sys.argv[1:])
 
 if __name__ == "__main__":
     main()

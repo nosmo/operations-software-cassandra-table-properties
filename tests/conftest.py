@@ -1,46 +1,90 @@
-# pylint: disable=missing-docstring, invalid-name, broad-except
+""" Setup pytest fixtures """
 import pytest
 import yaml
 
-import table_properties.db as db
+from table_properties.db import Db, ConnectionParams
+
+# pylint: disable=unused-argument, invalid-name, no-self-use
+
+DB = None
+
+
+class MockDb():
+    """ Mock database class """
+    def __init__(self, connection_params: ConnectionParams = None):
+        # self._params = connection_params.copy() if connection_params \
+        #     else ConnectionParams()
+        pass
+
+    def check_connection(self):
+        """Test Cassandra connectivity
+
+        Returns:
+            True
+        """
+        return True
+
+    def get_current_config(self, drop_ids: bool = False) -> dict:
+        """Retrieve the current config from the Cassandra instance.
+
+        Args:
+            connection: Connection parameters
+
+        Returns:
+            Dictionary with keyspace and table properties.
+        """
+        # Load the mock config
+        with open("./tests/mocks/excalibur.yaml", "r") as f:
+            return yaml.safe_load(f)
 
 
 @pytest.fixture(scope="session")
-def current_config():
-    """ Injects current config data into tests
+def default_database():
+    """ Set up local database (localhost)
 
         Test if a local Cassandra instance is available for testing. If not
         use mock data to run tests.
     """
-    conn_params = db.get_connection_settings()
+    global DB  # pylint: disable=global-statement
 
-    if db.check_connection(conn_params):
-        try:
-            with open("./tests/setup/cql/drop_excalibur.cql", "r") as f:
-                stmt = f.read()
-            db.exec_stmt(connection=conn_params, cmd_stmt=stmt)
+    DB = Db()
 
-            with open("./tests/setup/cql/create_excalibur.cql", "r") as f:
-                stmt = f.read()
-            db.exec_stmt(connection=conn_params, cmd_stmt=stmt)
+    if DB.check_connection():
+        # Delete existing keyspaces
+        sel_stmt = "SELECT keyspace_name FROM system_schema.keyspaces"
+        rows = DB.exec_query(sel_stmt)
 
-            return db.get_current_config(conn_params, True)
-        except Exception:
-            pass
+        keyspace_names = [row.get("keyspace_name") for row in rows
+                          if not row.get("keyspace_name").startswith("system")]
 
-    # Load the mock config
-    with open("./tests/mocks/excalibur.yaml", "r") as f:
-        return yaml.safe_load(f)
+        for keyspace in keyspace_names:
+            DB.exec_query("DROP KEYSPACE IF EXISTS \"{}\"".format(keyspace))
+
+        # Populate instance with sample schemas
+        with open("./tests/setup/cql/create_excalibur.cql", "r") as f:
+            cmd_stmt = f.read()
+
+        cmds = cmd_stmt.split(";")
+        for cmd in cmds:
+            trimmed_cmd = cmd.strip()
+            if trimmed_cmd:
+                DB.exec_query(trimmed_cmd)
+
+        return DB
+
+    return MockDb()
 
 
 def pytest_sessionfinish():
-    conn_params = db.get_connection_settings()
+    """ Tear down after pytest session ends """
+    if not DB or isinstance(DB, MockDb):
+        return
 
     # teardown
-    if db.check_connection(conn_params):
+    if DB.check_connection():
         try:
             with open("./tests/setup/cql/drop_excalibur.cql", "r") as f:
                 stmt = f.read()
-            db.exec_stmt(connection=conn_params, cmd_stmt=stmt)
-        except Exception:
+            DB.exec_query(stmt)
+        except Exception:  # pylint: disable=broad-except
             pass

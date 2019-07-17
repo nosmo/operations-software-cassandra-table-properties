@@ -16,10 +16,12 @@ def compare_statments(actual, expected):
 
 
 class TestGenerator:
-    def test_excalibur_increase_replicas(self, current_config):
+    def test_excalibur_increase_replicas(self, default_database):
         # Load the YAML
         desired_config = \
             tp.utils.load_yaml("./tests/configs/excalibur_incr_dcs.yaml")
+
+        current_config = default_database.get_current_config(True)
 
         # Validate output
         stmt = tp.generator.generate_alter_statements(
@@ -30,10 +32,12 @@ class TestGenerator:
         assert "'data_center1': 4" in stmt
         assert "'data_center2': 5" in stmt
 
-    def test_excalibur_unchanged(self, current_config):
+    def test_excalibur_unchanged(self, default_database):
         # Load the YAML
         desired_config = \
             tp.utils.load_yaml("./tests/configs/excalibur_unchanged.yaml")
+
+        current_config = default_database.get_current_config(True)
 
         assert current_config == desired_config
 
@@ -45,11 +49,13 @@ class TestGenerator:
         assert isinstance(stmt, str)
         assert stmt == ""
 
-    def test_excalibur_change_table_fields(self, current_config):
+    def test_excalibur_change_table_fields(self, default_database):
         # Load the YAML
         desired_config = \
             tp.utils.load_yaml("./tests/configs/excalibur_change_comments.yaml"
                                )
+
+        current_config = default_database.get_current_config(True)
 
         # Validate output
         stmt = tp.generator.generate_alter_statements(

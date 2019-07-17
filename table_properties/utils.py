@@ -1,7 +1,6 @@
 # pylint: disable = missing-docstring, broad-except
 """ Helper functions
 """
-import configparser
 import json
 import logging
 import os
@@ -82,33 +81,6 @@ def setup_logging(log_file: str = None, log_level=None) -> None:
         logging.getLevelName(logging.CRITICAL))
 
 
-def timestamped_filename(prefix: str = "", ext: str = "") -> str:
-    """ Create a timestamped filename with custom prefix and
-        extension
-
-    Args:
-        prefix: Prepended to the time stamp
-        ext:    extension to be used
-
-    Returns:
-        Filename
-    """
-    new_prefix = prefix + "_" if prefix else ""
-    new_ext = ext if "." in ext else "." + ext
-    return "{}{}{}".format(new_prefix, time.strftime("%Y%m%d-%H%M%S"), new_ext)
-
-
-def get_app_folder() -> str:
-    """Return application folder path
-
-    Returns:
-        Path to app folder
-    """
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-
-    return os.path.abspath(os.path.join(script_dir, os.pardir))
-
-
 def load_file(filename: str, loader, encoding: str = "utf-8"):
     """Load a structured text file
 
@@ -130,6 +102,9 @@ def load_file(filename: str, loader, encoding: str = "utf-8"):
         logging.error(msg)
         raise Exception(msg)
 
+    if not loader:
+        raise Exception("Missing function argument.")
+
     try:
         with open(filename, "r", encoding=encoding) as in_file:
             content = loader(in_file)
@@ -137,35 +112,6 @@ def load_file(filename: str, loader, encoding: str = "utf-8"):
         logging.exception(ex)
 
     return content
-
-
-def write_file(filename: str, data: dict, overwrite: bool, writer,
-               encoding: str = "utf-8", **options) -> bool:
-    """Write a structured text file
-
-    Args:
-        filename: Full path to file
-        writer:   Structured text write function, e.g. yaml.dump
-
-    Returns:
-        True if write succeeded. False otherwise
-    """
-    if os.path.exists(os.path.abspath(filename)) and not overwrite:
-        msg = "Configuration file '{}' already exists.".format(filename) \
-            + "Add -f or --force if you like to overwrite the existing file."
-        logging.warning(msg)
-        print(msg)
-
-        return False
-
-    try:
-        with open(filename, "w", encoding=encoding) as outfile:
-            writer(data, outfile, **options)
-        return True
-    except Exception as ex:
-        logging.exception(ex)
-
-    return False
 
 
 def load_yaml(filename: str) -> typing.Optional[dict]:
@@ -222,15 +168,3 @@ def find_by_value(dict_list: list, key: str, value, default_value=None):
 
     return default_value
 
-
-def load_rconfig(filename: str) -> configparser.ConfigParser:
-    """ Load cqlshrc file
-    """
-    config = None
-    full_rc_filename = os.path.expanduser(filename)
-    if os.path.isfile(full_rc_filename):
-        config = configparser.ConfigParser()
-        with open(full_rc_filename, "r") as rc_file:
-            config.read_file(rc_file)
-
-    return config

@@ -3,7 +3,7 @@
 """
 import logging
 
-from table_properties import db, utils
+from table_properties import utils
 
 
 def compare_values(src: dict, dst: dict) -> list:
@@ -178,18 +178,3 @@ def generate_alter_statements(current_config: dict, desired_config: dict)->str:
                                                desired_tables)
 
     return stmt
-
-
-def main():
-    conn_params = db.get_connection_settings()
-
-    # Load keyspaces properties and table properties from current instance
-    current_config = db.get_current_config(conn_params)
-
-    # Load desired keyspace and table properties
-    desired_config = utils.load_yaml("./configs/excalibur.yaml")
-
-    generate_alter_statements(current_config, desired_config)
-
-if __name__ == "__main__":
-    main()

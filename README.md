@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.com/hknustwmf/cassandra-table-properties.svg?branch=master)](https://travis-ci.com/hknustwmf/cassandra-table-properties)
 [![codecov](https://codecov.io/gh/hknustwmf/cassandra-table-properties/branch/master/graph/badge.svg)](https://codecov.io/gh/hknustwmf/cassandra-table-properties)
+[![release](https://img.shields.io/github/release/hknustwmf/cassandra-table-properties.svg)](https://github.com/hknustwmf/cassandra-table-properties/releases)
+[![license](https://img.shields.io/badge/License-GPL2-green.svg)](https://opensource.org/licenses/GPL-2.0)
 
 Cassandra table and keyspace configuration tool.
 
