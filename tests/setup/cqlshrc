@@ -78,7 +78,7 @@ hostname = 127.0.0.1
 port = 9042
 
 ;; Always connect using SSL - false by default
-ssl = true
+ssl = false
 
 ;; A timeout in seconds for opening new connections
 ; timeout = 10

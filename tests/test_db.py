@@ -25,6 +25,7 @@ class TestDb():
             d = db.Db(db.ConnectionParams(host="127.0.0.2"))
             d.check_connection()
 
+
 class TestConnectionParams():
     def test_defaults(self):
         cp = db.ConnectionParams()
@@ -34,17 +35,21 @@ class TestConnectionParams():
         assert not cp.is_ssl_required
         assert cp.ssl_context is None
 
-    def test_username_update(self):
+    def test_username_password_update(self):
         cp = db.ConnectionParams()
+        assert cp.auth_provider is None
         cp.username = "cassandra"
         assert cp.username == "cassandra"
-        assert cp.auth_provider is not None
-
-    def test_password_update(self):
-        cp = db.ConnectionParams()
+        assert cp.auth_provider is None
         cp.password = "cassandra"
         assert cp.password == "cassandra"
         assert cp.auth_provider is not None
+
+    def test_security_context(self):
+        cp = db.ConnectionParams()
+        assert cp.ssl_context is None
+        cp.is_ssl_required = True
+        assert cp.ssl_context is not None
 
     def test_load_rc(self):
         cp = db.ConnectionParams.load_from_rcfile("tests/setup/cqlshrc")

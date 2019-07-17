@@ -3,9 +3,7 @@
 """
 import json
 import logging
-import os
 import sys
-import time
 import typing
 
 import yaml
@@ -81,7 +79,7 @@ def setup_logging(log_file: str = None, log_level=None) -> None:
         logging.getLevelName(logging.CRITICAL))
 
 
-def load_file(filename: str, loader, encoding: str = "utf-8"):
+def load_file(filename: str, loader, encoding: str):
     """Load a structured text file
 
     Retrieve a structured file in e.g. JSON or YAML format.
@@ -97,24 +95,16 @@ def load_file(filename: str, loader, encoding: str = "utf-8"):
     """
     content = None
 
-    if not os.path.isfile(filename):
-        msg = "File '{}' not found".format(filename)
-        logging.error(msg)
-        raise Exception(msg)
-
     if not loader:
         raise Exception("Missing function argument.")
 
-    try:
-        with open(filename, "r", encoding=encoding) as in_file:
-            content = loader(in_file)
-    except Exception as ex:
-        logging.exception(ex)
+    with open(filename, "r", encoding=encoding) as in_file:
+        content = loader(in_file)
 
     return content
 
 
-def load_yaml(filename: str) -> typing.Optional[dict]:
+def load_yaml(filename: str, encoding: str = "utf-8") -> typing.Optional[dict]:
     """Load a YAML config file
 
     Args:
@@ -122,21 +112,10 @@ def load_yaml(filename: str) -> typing.Optional[dict]:
     Returns:
         A dict or None.
     """
-    return load_file(filename, yaml.safe_load)
+    return load_file(filename, yaml.safe_load, encoding)
 
 
-def format_yaml(data: dict):
-    """Convert dictionary into formatted YAML
-
-    Args:
-        data:      yaml data to be formatted
-    Returns:
-        Formatted YAML text
-    """
-    return yaml.dump(data, default_flow_style=False)
-
-
-def load_json(filename: str) -> typing.Optional[dict]:
+def load_json(filename: str, encoding: str = "utf-8") -> typing.Optional[dict]:
     """Load a JSON file.
 
     Args:
@@ -144,7 +123,7 @@ def load_json(filename: str) -> typing.Optional[dict]:
     Returns:
         A dict or None.
     """
-    return load_file(filename, json.load)
+    return load_file(filename, json.load, encoding)
 
 
 def find_by_value(dict_list: list, key: str, value, default_value=None):
@@ -153,18 +132,10 @@ def find_by_value(dict_list: list, key: str, value, default_value=None):
     Returns:
         First dictionary containing the value or default_value
     """
-    if not isinstance(dict_list, list):
+    if not isinstance(dict_list, list) or not key or not value:
         return default_value
 
-    if not value:
-        logging.warning("find_by_value() requires a value to be provided")
-        return default_value
+    matches = list(filter(lambda x: isinstance(x, dict) and
+                          x.get(key) == value, dict_list))
 
-    for list_item in dict_list:
-        if not isinstance(list_item, dict):
-            continue
-        if list_item.get(key, "") == value:
-            return list_item
-
-    return default_value
-
+    return matches[0] if matches else default_value

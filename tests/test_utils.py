@@ -32,4 +32,4 @@ class TestInputOutput():
 
     def test_read_nonexisting_file(self):
         with pytest.raises(Exception):
-            tp.utils.load_file("testing123", None)
+            tp.utils.load_file("testing123", None, "utf-8")

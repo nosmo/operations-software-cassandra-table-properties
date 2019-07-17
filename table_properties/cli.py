@@ -7,6 +7,8 @@ import logging
 import os
 import sys
 
+import yaml
+
 import table_properties as tp
 
 
@@ -39,8 +41,8 @@ class TablePropertiesCli():
                             dest="config_filename",
                             help="Desired configuration YAML file")
 
-        parser.add_argument("-c",
-                            "--contactpoint",
+        parser.add_argument("-i",
+                            "--ip",
                             metavar="<ip>",
                             dest="host_ip",
                             help="Host IP address or name. Default: localhost",
@@ -88,6 +90,13 @@ class TablePropertiesCli():
                             help="Prompt for password.",
                             action="store_true")
 
+        parser.add_argument("-q", "--quiet",
+                            dest="run_quiet",
+                            help="When the flag is set exit with 0 only if the "
+                                 "configuration matches the YAML file. Exit "
+                                 "with 1 otherwise.",
+                            action="store_true")
+
         parser.add_argument("-r",
                             "--rcfile",
                             metavar="<filename>",
@@ -96,9 +105,9 @@ class TablePropertiesCli():
                                  "Default: ~/.cassandra/cqlshrc",
                             required=False)
 
-        parser.add_argument("-t", "--tls",
+        parser.add_argument("-s", "--ssl",
                             dest="use_ssl",
-                            help="Use TLS encryption for client server "
+                            help="Use SSL/TLS encryption for client server "
                                  "communication.",
                             action="store_true")
 
@@ -137,25 +146,36 @@ class TablePropertiesCli():
             password = getpass.getpass(prompt="Password: ")
 
         config_filename = None
-        conn_params = tp.database.ConnectionParams(
-            host=self._args.host_ip,
-            port=self._args.host_port,
-            username=self._args.username,
-            password=password,
-            ssl_required=self._args.use_ssl,
-            client_cert_filename=self._args.client_cert_file,
-            client_key_filename=self._args.client_key_file)
+        conn_params = tp.database.ConnectionParams()
+        if self._args.rc_file:
+            if not os.path.exists(self._args.rc_file):
+                print("File '{}' not found.".format(self._args.rc_file))
+                sys.exit(1)
+
+            print("Reading configuration from '{}'..."
+                  .format(self._args.rc_file), file=sys.stderr)
+            conn_params = \
+                tp.database.ConnectionParams.load_from_rcfile(
+                    self._args.rc_file)
+
+        # Apply switch settings.
+        if self._args.host_ip:
+            conn_params.host = self._args.host_ip
+        if self._args.host_port:
+            conn_params.port = self._args.host_port
+        if self._args.username:
+            conn_params.username = self._args.username
+        if self._args.password_reqd:
+            conn_params.password = password
+        if self._args.use_ssl:
+            conn_params.is_ssl_required = self._args.use_ssl
+        if self._args.client_cert_file:
+            conn_params.client_cert_file = self._args.client_cert_file
+        if self._args.client_key_file:
+            conn_params.client_key_file = self._args.client_key_file
 
         try:
             if self._args.dump_config or self._args.config_filename:
-                if self._args.rc_file:
-                    if not os.path.exists(self._args.rc_file):
-                        print("File '{}' not found.")
-                        sys.exit(1)
-                    conn_params = \
-                        tp.database.ConnectionParams.load_from_rcfile(
-                            self._args.rc_file)
-
                 # Construct the connection parameters
                 db = tp.database.Db(conn_params)
 
@@ -163,10 +183,8 @@ class TablePropertiesCli():
                 current_config = db.get_current_config()
 
                 if self._args.dump_config:
-                    try:
-                        print(tp.utils.format_yaml(current_config))
-                    except Exception as ex:
-                        logging.exception(ex)
+                    print(yaml.dump(current_config,
+                                    default_flow_style=False))
                 else:
                     config_filename = self._args.config_filename
                     logging.info("Reading config from '%s'", config_filename)
@@ -178,11 +196,15 @@ class TablePropertiesCli():
                                                   desired_config)
 
                     print(alter_statements)
+
+                    if alter_statements and self._args.run_quiet:
+                        # Exit with code 1 if running in quiet mode and
+                        # we have changes pending
+                        sys.exit(1)
             else:
                 self.get_arg_parser().print_usage()
         except Exception as ex:
             logging.exception(ex)
-            print(ex)
 
 
 def main():

@@ -155,15 +155,17 @@ table-properties -r <cqlshrc filename>
 #### Other switches
 
 ```
-  -c <ip>, --contactpoint <ip>            Host IP address or name. Default: localhost
+  -h, --help                              show this help message and exit
+  -i <ip>, --ip <ip>                      Host IP address or name. Default: localhost
   -C <filename>, --clientcert <filename>  Client cert file name.
   -d, --dump                              Dump current configuration to STDOUT
   -k <filename>, --clientkey <filename>   Client key file name.
   -l <filename>, --log <filename>         Log file name. If none is provied, STDERR is used.
   -p <port #>, --port <port #>            Port number. Default: 9042
   -P, --password                          Prompt for password.
+  -q, --quiet                             When the flag is set exit with 0 only if the configuration matches the YAML file. Exit with code 1 otherwise.
   -r <filename>, --rcfile <filename>      cqlrc file name. Default: ~/.cassandra/cqlshrc
-  -t, --tls                               Use TLS encryption for client server communication.
+  -s, --ssl                               Use SSL/TLS encryption for client server communication.
   -u <user name>, --username <user name>  User name for plain text authentication.
-  -v, --version                           show program's version number and exit
+  -v, --version                           Display version number and exit
 ```

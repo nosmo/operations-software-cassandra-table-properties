@@ -51,21 +51,20 @@ class ConnectionParams():
         self._lbp = lbp if lbp else \
             cassandra.policies.WhiteListRoundRobinPolicy(self._host)
         self._ssl_required = ssl_required   # None = not set
-
-        if client_cert_filename and client_key_filename:
+        self._client_cert_filename = client_cert_filename
+        self._client_key_filename = client_key_filename
+        if ssl_required or (client_cert_filename and client_key_filename):
             self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-            self._ssl_context.load_cert_chain(certfile=client_cert_filename,
-                                              keyfile=client_key_filename)
+            if client_cert_filename and client_key_filename:
+                self._ssl_context.load_cert_chain(
+                    certfile=client_cert_filename, keyfile=client_key_filename)
         else:
             self._ssl_context = None
 
         self._username = username
         self._password = password
-        if username and password:
-            self._auth_provider = \
-                cassandra.auth.PlainTextAuthProvider(username, password)
-        else:
-            self._auth_provider = None
+        self._auth_provider = None
+        self.update_authentication_provider()
 
     @property
     def host(self):
@@ -106,12 +105,7 @@ class ConnectionParams():
     def username(self, value):
         """ Set the username """
         self._username = value
-        if value:
-            self._auth_provider = \
-                cassandra.auth.PlainTextAuthProvider(self._username,
-                                                     self._password)
-        else:
-            self._auth_provider = None
+        self.update_authentication_provider()
 
     @property
     def password(self):
@@ -122,12 +116,7 @@ class ConnectionParams():
     def password(self, value):
         """ Set the password """
         self._password = value
-        if value:
-            self._auth_provider = \
-                cassandra.auth.PlainTextAuthProvider(self._username,
-                                                     self._password)
-        else:
-            self._auth_provider = None
+        self.update_authentication_provider()
 
     @property
     def is_ssl_required(self):
@@ -139,6 +128,29 @@ class ConnectionParams():
     def is_ssl_required(self, value):
         """ Set SSL/TLS required flag """
         self._ssl_required = value
+        self.update_security_context()
+
+    @property
+    def client_cert_file(self):
+        """ Get the client cert filename """
+        return self._client_cert_filename
+
+    @client_cert_file.setter
+    def client_cert_file(self, value):
+        """ Set the client cert filename """
+        self._client_cert_filename = value
+        self.update_security_context()
+
+    @property
+    def client_key_file(self):
+        """ Get the client key filename """
+        return self._client_key_filename
+
+    @client_key_file.setter
+    def client_key_file(self, value):
+        """ Set the client key filename """
+        self._client_key_filename = value
+        self.update_security_context()
 
     @property
     def ssl_context(self):
@@ -150,6 +162,26 @@ class ConnectionParams():
         """ Auth Provider """
         return self._auth_provider
 
+    def update_security_context(self):
+        """ Create/recreate the security context """
+        if not self._ssl_context:
+            self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+        if self._client_cert_filename and self._client_key_filename:
+            # Only update if both are set
+            self._ssl_context.load_cert_chain(
+                certfile=self._client_cert_filename,
+                keyfile=self._client_key_filename)
+
+    def update_authentication_provider(self):
+        """ Create/recreate the auth provider """
+        if self._username and self._password:
+            # Only update provider when both are set
+            self._auth_provider = \
+                cassandra.auth.PlainTextAuthProvider(self._username,
+                                                     self._password)
+        else:
+            self._auth_provider = None
+
     @staticmethod
     def load_from_rcfile(filename: str):
         """ Read and parse a cqlshrc file
@@ -160,11 +192,13 @@ class ConnectionParams():
             ConnectionParams object or None in case of failure
         """
         rc_config = configparser.ConfigParser()
-        host = None
-        port = None
-        use_tls = None
-        username = None
-        password = None
+        # host = None
+        # port = None
+        # use_tls = None
+        # username = None
+        # password = None
+        # key_file = None
+        # cert_file = None
 
         try:
             full_rc_filename = os.path.expanduser(filename)
@@ -176,28 +210,20 @@ class ConnectionParams():
                 filename
             ))
 
-        if rc_config["connection"]["hostname"]:
-            host = rc_config["connection"]["hostname"]
+        host = rc_config.get("connection", "hostname", fallback=None)
+        port = rc_config.getint("connection", "port",
+                                fallback=DEFAULT_NATIVE_CQL_PORT)
+        use_tls = rc_config.getboolean("connection", "ssl",
+                                       fallback=False)
+        username = rc_config.get("authentication", "username", fallback=None)
+        password = rc_config.get("authentication", "password", fallback=None)
+        key_file = rc_config.get("ssl","userkey", fallback=None)
+        cert_file = rc_config.get("ssl", "usercert", fallback=None)
 
-        if rc_config["connection"]["port"]:
-            try:
-                port = int(rc_config["connection"]["port"])
-            except ValueError:
-                pass
-
-        if rc_config["connection"]["ssl"]:
-            # use_tls is false by default. Use rc value if not overriden by
-            # switch setting.
-            use_tls = rc_config["connection"]["ssl"].lower() == "true"
-
-        if rc_config["authentication"]["username"]:
-            username = rc_config["authentication"]["username"]
-        if rc_config["authentication"]["password"]:
-            password = rc_config["authentication"]["password"]
-
-        # TODO: Does the rconfig support certs?
         return ConnectionParams(host=host, port=port, username=username,
-                                password=password, ssl_required=use_tls)
+                                password=password, ssl_required=use_tls,
+                                client_cert_filename=cert_file,
+                                client_key_filename=key_file)
 
 
 class Db():
@@ -285,7 +311,7 @@ class Db():
                         msg += "Is SSL/TLS required to connect to the host?"
                     print(msg)
             else:
-                print(ex)
+                logging.exception(ex)
             raise Exception("Connection failed")
 
         except Exception as ex:
