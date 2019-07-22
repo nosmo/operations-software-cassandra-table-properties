@@ -1,9 +1,16 @@
 # pylint: disable=missing-docstring, no-self-use
 import copy
-
-# import pytest
+import yaml
 
 import src as tp
+
+
+def load_yaml(filename: str):
+    conf = None
+    with open(filename, "r", encoding="utf-8") as conf_file:
+        conf = yaml.safe_load(conf_file)
+
+    return conf
 
 
 def compare_statments(actual, expected):
@@ -18,8 +25,7 @@ def compare_statments(actual, expected):
 class TestGenerator:
     def test_excalibur_increase_replicas(self, default_database):
         # Load the YAML
-        desired_config = \
-            tp.utils.load_yaml("./tests/configs/excalibur_incr_dcs.yaml")
+        desired_config = load_yaml("./tests/configs/excalibur_incr_dcs.yaml")
 
         current_config = default_database.get_current_config(True)
 
@@ -33,8 +39,7 @@ class TestGenerator:
 
     def test_excalibur_unchanged(self, default_database):
         # Load the YAML
-        desired_config = \
-            tp.utils.load_yaml("./tests/configs/excalibur_unchanged.yaml")
+        desired_config = load_yaml("./tests/configs/excalibur_unchanged.yaml")
 
         current_config = default_database.get_current_config(True)
 
@@ -49,9 +54,8 @@ class TestGenerator:
 
     def test_excalibur_change_table_fields(self, default_database):
         # Load the YAML
-        desired_config = \
-            tp.utils.load_yaml("./tests/configs/excalibur_change_comments.yaml"
-                               )
+        desired_config = load_yaml(
+            "./tests/configs/excalibur_change_comments.yaml")
 
         current_config = default_database.get_current_config(True)
 
@@ -59,9 +63,9 @@ class TestGenerator:
         stmt = tp.generator.generate_alter_statements(
             copy.deepcopy(current_config), desired_config)
 
-        expected_stmt = "\nALTER TABLE excalibur.monkeyspecies\n" \
+        expected_stmt = "\nALTER TABLE \"excalibur\".\"monkeyspecies\"\n" \
             "WITH comment = 'Test comment';" \
-            "\nALTER TABLE excalibur.monkeyspecies2\n" \
+            "\nALTER TABLE \"excalibur\".\"monkeyspecies2\"\n" \
             "WITH comment = 'Test comment 2';"
         assert stmt is not None
         assert stmt != ""

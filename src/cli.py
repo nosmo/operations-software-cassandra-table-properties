@@ -1,4 +1,5 @@
 # pylint: disable=broad-except, invalid-name, too-many-branches
+
 """ CLI interface class
 """
 import argparse
@@ -128,6 +129,7 @@ class TablePropertiesCli():
 
         return parser
 
+    # pylint: disable=too-many-statements
     def execute(self, args: list) -> None:
         """Execute applicaton
         """
@@ -184,12 +186,19 @@ class TablePropertiesCli():
                 # Read current configuration from database
                 current_config = conn.get_current_config()
 
+                if not current_config:
+                    # No keyspaces besides system* present
+                    print("No keyspaces found.", file=sys.stderr)
+                    return
+
                 if self._args.dump_config:
                     print(yaml.dump(current_config, default_flow_style=False))
                 else:
                     config_filename = self._args.config_filename
                     logging.info("Reading config from '%s'", config_filename)
-                    desired_config = utils.load_yaml(config_filename)
+                    with open(config_filename, "r",
+                              encoding="utf-8") as conf_file:
+                        desired_config = yaml.safe_load(conf_file)
 
                     # Generate ALTER statements for Keyspaces and Tables
                     alter_statements = gen.generate_alter_statements(
@@ -204,7 +213,7 @@ class TablePropertiesCli():
             else:
                 self.get_arg_parser().print_usage()
         except Exception as ex:
-            logging.exception(ex)
+            print(ex)
 
 
 def main():

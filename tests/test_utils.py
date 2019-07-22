@@ -1,8 +1,6 @@
 # pylint: disable=missing-docstring, broad-except, invalid-name, no-self-use
 import datetime
 
-import pytest
-
 import src as tp
 
 
@@ -23,13 +21,3 @@ class TestFindByValue():
         assert tp.utils.find_by_value(l, "d", 4) == {"c": 3, "d": 4}
         assert tp.utils.find_by_value(l, "e", 1) == {"e": 1}
         assert tp.utils.find_by_value(l, "e", None) is None
-
-
-class TestInputOutput():
-    def test_read_yaml_config(self):
-        orig = tp.utils.load_yaml("./tests/configs/excalibur_unchanged.yaml")
-        assert orig is not None
-
-    def test_read_nonexisting_file(self):
-        with pytest.raises(Exception):
-            tp.utils.load_file("testing123", None, "utf-8")

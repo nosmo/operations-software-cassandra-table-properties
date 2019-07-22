@@ -21,7 +21,6 @@ MAPPED_FIELD_NAMES = {"keyspace_name": "name", "table_name": "name"}
 
 class ConnectionParams():
     """ Cassandra connection parameters """
-
     def __init__(self,
                  host: str = None,
                  port: int = None,
@@ -50,7 +49,7 @@ class ConnectionParams():
         # Default LBP
         self._lbp = lbp if lbp else \
             cassandra.policies.WhiteListRoundRobinPolicy(self._host)
-        self._ssl_required = ssl_required   # None = not set
+        self._ssl_required = ssl_required  # None = not set
         self._client_cert_filename = client_cert_filename
         self._client_key_filename = client_key_filename
         if ssl_required or (client_cert_filename and client_key_filename):
@@ -67,9 +66,9 @@ class ConnectionParams():
         self.update_authentication_provider()
 
     @property
-    def host(self):
+    def host(self) -> str:
         """ Get the host name """
-        return self._host if self._host else DEFAULT_HOST
+        return self._host if self._host[0] else DEFAULT_HOST
 
     @host.setter
     def host(self, value):
@@ -77,7 +76,7 @@ class ConnectionParams():
         self._host = value if value else DEFAULT_HOST
 
     @property
-    def port(self):
+    def port(self) -> int:
         """ Get the port number """
         return self._port if self._port else DEFAULT_NATIVE_CQL_PORT
 
@@ -87,7 +86,7 @@ class ConnectionParams():
         self._port = value if value else DEFAULT_NATIVE_CQL_PORT
 
     @property
-    def load_balancing_policy(self):
+    def load_balancing_policy(self) -> cassandra.policies.LoadBalancingPolicy:
         """ Get the load balancing policy """
         return self._lbp
 
@@ -97,7 +96,7 @@ class ConnectionParams():
         self._host = value
 
     @property
-    def username(self):
+    def username(self) -> str:
         """ Get the username """
         return self._username
 
@@ -108,7 +107,7 @@ class ConnectionParams():
         self.update_authentication_provider()
 
     @property
-    def password(self):
+    def password(self) -> str:
         """ Get the password """
         return self._password
 
@@ -119,7 +118,7 @@ class ConnectionParams():
         self.update_authentication_provider()
 
     @property
-    def is_ssl_required(self):
+    def is_ssl_required(self) -> bool:
         """ Is SSL/TLS required """
         return self._ssl_required if isinstance(self._ssl_required, bool) \
             else False
@@ -131,7 +130,7 @@ class ConnectionParams():
         self.update_security_context()
 
     @property
-    def client_cert_file(self):
+    def client_cert_file(self) -> str:
         """ Get the client cert filename """
         return self._client_cert_filename
 
@@ -142,7 +141,7 @@ class ConnectionParams():
         self.update_security_context()
 
     @property
-    def client_key_file(self):
+    def client_key_file(self) -> str:
         """ Get the client key filename """
         return self._client_key_filename
 
@@ -153,7 +152,7 @@ class ConnectionParams():
         self.update_security_context()
 
     @property
-    def ssl_context(self):
+    def ssl_context(self) -> ssl.SSLContext:
         """ SSL Context """
         return self._ssl_context
 
@@ -199,22 +198,24 @@ class ConnectionParams():
                 rc_config.read_file(rc_file)
         except Exception as ex:  # pylint: disable=broad-except
             logging.exception(ex)
-            raise Exception("File '{}' not found or could not be read.".format(
-                filename
-            ))
+            raise Exception(
+                "File '{}' not found or could not be read.".format(filename))
 
         host = rc_config.get("connection", "hostname", fallback=None)
-        port = rc_config.getint("connection", "port",
+        port = rc_config.getint("connection",
+                                "port",
                                 fallback=DEFAULT_NATIVE_CQL_PORT)
-        use_tls = rc_config.getboolean("connection", "ssl",
-                                       fallback=False)
+        use_tls = rc_config.getboolean("connection", "ssl", fallback=False)
         username = rc_config.get("authentication", "username", fallback=None)
         password = rc_config.get("authentication", "password", fallback=None)
         key_file = rc_config.get("ssl", "userkey", fallback=None)
         cert_file = rc_config.get("ssl", "usercert", fallback=None)
 
-        return ConnectionParams(host=host, port=port, username=username,
-                                password=password, ssl_required=use_tls,
+        return ConnectionParams(host=host,
+                                port=port,
+                                username=username,
+                                password=password,
+                                ssl_required=use_tls,
                                 client_cert_filename=cert_file,
                                 client_key_filename=key_file)
 
@@ -225,8 +226,11 @@ class Db():
         self._params = connection_params if connection_params \
             else ConnectionParams()
 
+        self._params.host = self._params.host[0] if isinstance(
+            self._params.host, list) else self._params.host
+
         self.cluster = cassandra.cluster.Cluster(
-            self._params.host,
+            [self._params.host],
             load_balancing_policy=self._params.load_balancing_policy,
             port=self._params.port,
             auth_provider=self._params.auth_provider,
@@ -260,7 +264,7 @@ class Db():
         return val
 
     @staticmethod
-    def convert_mapped_props(subconfig):
+    def convert_mapped_props(subconfig) -> dict:
         """Convert mapped properties
 
         Args:
@@ -310,7 +314,7 @@ class Db():
 
         return []
 
-    def check_connection(self):
+    def check_connection(self) -> bool:
         """Test Cassandra connectivity
 
         Returns:
@@ -386,12 +390,15 @@ class Db():
             connection: Connection parameters
 
         Returns:
-            Dictionary with keyspace and table properties.
+            Dictionary with keyspace and table properties or None
         """
-        keyspaces = self.get_keyspace_configs()
+        keyspace_config = self.get_keyspace_configs()
+        keyspaces = keyspace_config.get("keyspaces")
+        if not keyspaces:
+            return None
 
-        for keyspace in keyspaces.get("keyspaces", []):
+        for keyspace in keyspace_config.get("keyspaces", []):
             keyspace["tables"] = self.get_table_configs(
                 keyspace.get("name"), drop_ids)
 
-        return keyspaces
+        return keyspace_config

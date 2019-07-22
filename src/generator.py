@@ -37,39 +37,29 @@ def compare_values(src: dict, dst: dict) -> list:
         return []
 
     changed_values = []
-    for k in dst.keys():
+    for key in dst.keys():
         # Skip name properties
-        if k == "name":
+        if key == "name":
             continue
-        dst_value = dst.get(k)
-        src_value = src.get(k, None)
+        dst_value = dst.get(key)
+        src_value = src.get(key, None)
+        is_same_class = True
         if src_value and isinstance(src_value, dict) and isinstance(
                 dst_value, dict):
             src_class = src_value.pop("class", None)
             dst_class = dst_value.pop("class", None)
+            is_same_class = do_class_names_match(src_class, dst_class)
         else:
             src_class = None
             dst_class = None
 
-        if src_value != dst_value or not do_class_names_match(
-                src_class, dst_class):
-            changed_values.append({"property": k, "desired": dst_value})
+        if src_value != dst_value or not is_same_class:
+            # Pop the class back in (changed or not)
+            if dst_class or src_class:
+                dst_value["class"] = dst_class if dst_class else src_class
+            changed_values.append({"property": key, "desired": dst_value})
 
     return changed_values
-
-
-def connect_statments(stmt: str, add_new_line: bool = False) -> str:
-    """Helper function to connect partial CQL statements.
-
-    Args:
-        stmt:         Current CQL statement
-        add_new_line: Flag if connecting statement should be on new line
-
-    Returns:
-        connection line
-    """
-    spacer = "\n" if add_new_line else " "
-    return spacer + "WITH " if "WITH " not in stmt else spacer + "AND "
 
 
 def generate_alter_keyspace_statement(keyspace_name: str,
@@ -86,16 +76,19 @@ def generate_alter_keyspace_statement(keyspace_name: str,
         CQL statement with changed properties or empty string
     """
 
+    alter_stmt = ""
     changes = compare_values(current_keyspace, desired_keyspace)
-    if not changes:
-        return ""
 
-    stmt = "ALTER KEYSPACE {}".format(keyspace_name)
-    for change in changes:
-        stmt += connect_statments(stmt)
-        stmt += "{} = {}".format(change["property"], change["desired"])
+    if changes:
+        prop_values = [
+            "{} = {}".format(chg.get("property"), chg.get("desired"))
+            for chg in changes
+        ]
+        assignments = "\nAND ".join(prop_values)
+        alter_stmt = "ALTER KEYSPACE \"{}\" WITH {};".format(
+            keyspace_name, assignments)
 
-    return stmt + ";\n" if "WITH " in stmt else ""
+    return alter_stmt
 
 
 def generate_alter_table_statement(keyspace_name: str, current_tables: dict,
@@ -110,6 +103,9 @@ def generate_alter_table_statement(keyspace_name: str, current_tables: dict,
     Returns:
         CQL statement with changed properties or empty string
     """
+    def format_value(val: any) -> any:
+        return val if isinstance(val, dict) else "\'" + str(val) + "\'"
+
     tbl_stmts = ""
     for desired_table in desired_tables:
         tbl_name = desired_table.get("name", None)
@@ -123,24 +119,18 @@ def generate_alter_table_statement(keyspace_name: str, current_tables: dict,
 
         changes = compare_values(current_table, desired_table)
         if changes:
-            tbl_stmt = "\nALTER TABLE {}.{}".format(keyspace_name, tbl_name)
-            for change in changes:
-                prop_name = change["property"]
-                prop_value = change["desired"]
-                if not prop_value or prop_name == "id":
-                    continue
-                tbl_stmt += connect_statments(tbl_stmt, True)
-                if (isinstance(prop_value, dict) or
-                        str(prop_value).isnumeric()):
-                    param_templ = "{} = {}"
-                else:
-                    param_templ = "{} = '{}'"
-                prop_change = param_templ.format(prop_name, prop_value)
-                tbl_stmt += prop_change
-            tbl_stmts += tbl_stmt + ";"
+            prop_values = [
+                "{} = {}".format(chg.get("property"),
+                                 format_value(chg.get("desired")))
+                for chg in changes
+                if chg.get("desired") and chg.get("property") != "id"
+            ]
+            assignments = "\nAND ".join(prop_values)
+            tbl_stmt = "\nALTER TABLE \"{}\".\"{}\"\nWITH {};".format(
+                keyspace_name, tbl_name, assignments)
+            tbl_stmts += tbl_stmt
 
-    return tbl_stmts if isinstance(tbl_stmts, str) and "WITH " in tbl_stmts \
-        else ""
+    return tbl_stmts
 
 
 def generate_alter_statements(current_config: dict,
@@ -164,7 +154,7 @@ def generate_alter_statements(current_config: dict,
         if not ks_name:
             logging.error("Invalid keyspace '%s' config. Missing 'name' key",
                           desired_keyspace)
-            raise Exception("Invalid configuration data")
+            raise Exception("Invalid YAML conf. Missing keyspace name")
 
         current_keyspace = utils.find_by_value(current_keyspaces, "name",
                                                ks_name)

@@ -26,7 +26,7 @@ class TestTablePropertiesCli():
         cmd = cli.TablePropertiesCli()
         cmd.execute(["-d"])
         out, _ = capsys.readouterr()
-        assert out.strip().startswith("keyspaces: [")
+        assert out.strip() == ""
 
     def test_invoke_load_config(self, capsys):
         cmd = cli.TablePropertiesCli()
@@ -38,7 +38,7 @@ class TestTablePropertiesCli():
         cmd = cli.TablePropertiesCli()
         cmd.execute(["-r", "tests/setup/cqlshrc", "-d"])
         out, _ = capsys.readouterr()
-        assert out.strip().startswith("keyspaces: [")
+        assert out.strip() == ""
 
     def test_invoke_load_rc_nonexisting(self, capsys):
         cmd = cli.TablePropertiesCli()
