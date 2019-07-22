@@ -35,6 +35,13 @@ class TestConnectionParams():
         assert not cp.is_ssl_required
         assert cp.ssl_context is None
 
+    def test_change_defaults_using_setters(self):
+        cp = db.ConnectionParams()
+        cp.host = "testhost"
+        cp.port = 8888
+        assert cp.host == "testhost"
+        assert cp.port == 8888
+
     def test_username_password_update(self):
         cp = db.ConnectionParams()
         assert cp.auth_provider is None

@@ -6,6 +6,22 @@ import logging
 from table_properties import utils
 
 
+def do_class_names_match(src_class: str, dst_class: str) -> bool:
+    if src_class and dst_class:
+        src_class_arr = src_class.split(".")
+        dst_class_arr = dst_class.split(".")
+        if len(src_class_arr) == len(dst_class_arr):
+            return sorted(src_class_arr) == sorted(dst_class_arr)
+
+        return src_class_arr[-1] == dst_class_arr[-1]
+    if src_class or dst_class:
+        # Only one class name was provided
+        return False
+
+    # Neither class names were provided
+    return True
+
+
 def compare_values(src: dict, dst: dict) -> list:
     """ Compare configuration properties
 
@@ -17,17 +33,6 @@ def compare_values(src: dict, dst: dict) -> list:
         List of changed values
     """
 
-    def is_primitive(obj) -> bool:
-        """Helper function for non-mapped properties
-
-        Args:
-            obj: Property value
-
-        Returns:
-            True if bool, string, integer, or float. False otherwise
-        """
-        return isinstance(obj, (bool, float, int, str))
-
     if not (isinstance(src, dict) and isinstance(dst, dict)):
         return []
 
@@ -36,15 +41,18 @@ def compare_values(src: dict, dst: dict) -> list:
         # Skip name properties
         if k == "name":
             continue
-
         dst_value = dst.get(k)
         src_value = src.get(k, None)
-        if (src_value and not is_primitive(src_value)) \
-                or not is_primitive(dst_value):
-            logging.debug("""The value of '%s' is a mapped type.
-                             You may want to break the type down.""", k)
+        if src_value and isinstance(src_value, dict) and isinstance(
+                dst_value, dict):
+            src_class = src_value.pop("class", None)
+            dst_class = dst_value.pop("class", None)
+        else:
+            src_class = None
+            dst_class = None
 
-        if src_value != dst_value:
+        if src_value != dst_value or not do_class_names_match(
+                src_class, dst_class):
             changed_values.append({"property": k, "desired": dst_value})
 
     return changed_values
@@ -77,19 +85,20 @@ def generate_alter_keyspace_statement(keyspace_name: str,
     Returns:
         CQL statement with changed properties or empty string
     """
-    stmt = "ALTER KEYSPACE {}".format(keyspace_name)
 
     changes = compare_values(current_keyspace, desired_keyspace)
-    if changes:
-        for change in changes:
-            stmt += connect_statments(stmt)
-            stmt += "{} = {}".format(change["property"], change["desired"])
+    if not changes:
+        return ""
+
+    stmt = "ALTER KEYSPACE {}".format(keyspace_name)
+    for change in changes:
+        stmt += connect_statments(stmt)
+        stmt += "{} = {}".format(change["property"], change["desired"])
 
     return stmt + ";\n" if "WITH " in stmt else ""
 
 
-def generate_alter_table_statement(keyspace_name: str,
-                                   current_tables: dict,
+def generate_alter_table_statement(keyspace_name: str, current_tables: dict,
                                    desired_tables: dict) -> str:
     """ Create ALTER statements for tables in keyspace
 
@@ -101,23 +110,20 @@ def generate_alter_table_statement(keyspace_name: str,
     Returns:
         CQL statement with changed properties or empty string
     """
-    tbl_stmts = "\nUSE \"{}\";".format(keyspace_name)
-
+    tbl_stmts = ""
     for desired_table in desired_tables:
         tbl_name = desired_table.get("name", None)
         if not tbl_name:
             raise Exception("Missing table name in config")
 
-        current_table = utils.find_by_value(current_tables, "name",
-                                            tbl_name)
+        current_table = utils.find_by_value(current_tables, "name", tbl_name)
 
         if not current_table:
-            logging.warning("Table '%s' does not exist. Skipping...",
-                            tbl_name)
+            logging.warning("Table '%s' does not exist. Skipping...", tbl_name)
 
         changes = compare_values(current_table, desired_table)
         if changes:
-            tbl_stmt = "\nALTER TABLE {}".format(tbl_name)
+            tbl_stmt = "\nALTER TABLE {}.{}".format(keyspace_name, tbl_name)
             for change in changes:
                 prop_name = change["property"]
                 prop_value = change["desired"]
@@ -137,7 +143,8 @@ def generate_alter_table_statement(keyspace_name: str,
         else ""
 
 
-def generate_alter_statements(current_config: dict, desired_config: dict)->str:
+def generate_alter_statements(current_config: dict,
+                              desired_config: dict) -> str:
     """ Create ALTER statements for tables and keyspaces
 
     Args:
@@ -162,16 +169,16 @@ def generate_alter_statements(current_config: dict, desired_config: dict)->str:
         current_keyspace = utils.find_by_value(current_keyspaces, "name",
                                                ks_name)
         if not current_keyspace:
-            logging.warning("""Skipped keyspace '%s'. Not found in
+            logging.warning(
+                """Skipped keyspace '%s'. Not found in
                             current config. Add keyspace via DDL schema""",
-                            ks_name)
+                ks_name)
             continue
 
         current_tables = current_keyspace.pop("tables", {})
         desired_tables = desired_keyspace.pop("tables", {})
 
-        stmt += generate_alter_keyspace_statement(ks_name,
-                                                  current_keyspace,
+        stmt += generate_alter_keyspace_statement(ks_name, current_keyspace,
                                                   desired_keyspace)
 
         stmt += generate_alter_table_statement(ks_name, current_tables,

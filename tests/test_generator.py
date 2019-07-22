@@ -25,8 +25,7 @@ class TestGenerator:
 
         # Validate output
         stmt = tp.generator.generate_alter_statements(
-            copy.deepcopy(current_config),
-            desired_config)
+            copy.deepcopy(current_config), desired_config)
 
         assert stmt is not None
         assert "'data_center1': 4" in stmt
@@ -43,8 +42,7 @@ class TestGenerator:
 
         # Validate generator output
         stmt = tp.generator.generate_alter_statements(
-            copy.deepcopy(current_config),
-            desired_config)
+            copy.deepcopy(current_config), desired_config)
 
         assert isinstance(stmt, str)
         assert stmt == ""
@@ -59,12 +57,26 @@ class TestGenerator:
 
         # Validate output
         stmt = tp.generator.generate_alter_statements(
-            copy.deepcopy(current_config),
-            desired_config)
+            copy.deepcopy(current_config), desired_config)
 
-        expected_stmt = "\nUSE \"excalibur\";\nALTER TABLE monkeyspecies\n" \
-            "WITH comment = 'Test comment';\nALTER TABLE monkeyspecies2\n" \
+        expected_stmt = "\nALTER TABLE excalibur.monkeyspecies\n" \
+            "WITH comment = 'Test comment';" \
+            "\nALTER TABLE excalibur.monkeyspecies2\n" \
             "WITH comment = 'Test comment 2';"
         assert stmt is not None
         assert stmt != ""
         compare_statments(stmt, expected_stmt)
+
+    def test_class_name_comparision(self):
+        assert tp.generator.do_class_names_match("SimpleStrategy",
+                                                 "SimpleStrategy")
+        assert tp.generator.do_class_names_match(
+            "org.apache.cassandra.locator.SimpleStrategy", "SimpleStrategy")
+        assert tp.generator.do_class_names_match(
+            "org.apache.cassandra.locator.SimpleStrategy",
+            "org.apache.cassandra.locator.SimpleStrategy")
+        assert not tp.generator.do_class_names_match(
+            "org.apache.cassandra.locator.SimpleStrategy",
+            "org.apache.cassandra.locator1.SimpleStrategy")
+        assert tp.generator.do_class_names_match("", "")
+        assert tp.generator.do_class_names_match(None, None)

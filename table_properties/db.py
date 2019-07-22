@@ -1,4 +1,4 @@
-# pylint: disable=invalid-name, R0902, R0913
+# pylint: disable=invalid-name,too-many-instance-attributes,too-many-arguments
 """ Database interface
 """
 import configparser
@@ -82,7 +82,7 @@ class ConnectionParams():
         return self._port if self._port else DEFAULT_NATIVE_CQL_PORT
 
     @port.setter
-    def post(self, value):
+    def port(self, value):
         """ Set the port """
         self._port = value if value else DEFAULT_NATIVE_CQL_PORT
 
@@ -136,7 +136,7 @@ class ConnectionParams():
         return self._client_cert_filename
 
     @client_cert_file.setter
-    def client_cert_file(self, value):
+    def set_client_cert_file(self, value):
         """ Set the client cert filename """
         self._client_cert_filename = value
         self.update_security_context()
@@ -147,7 +147,7 @@ class ConnectionParams():
         return self._client_key_filename
 
     @client_key_file.setter
-    def client_key_file(self, value):
+    def set_client_key_file(self, value):
         """ Set the client key filename """
         self._client_key_filename = value
         self.update_security_context()
@@ -192,13 +192,6 @@ class ConnectionParams():
             ConnectionParams object or None in case of failure
         """
         rc_config = configparser.ConfigParser()
-        # host = None
-        # port = None
-        # use_tls = None
-        # username = None
-        # password = None
-        # key_file = None
-        # cert_file = None
 
         try:
             full_rc_filename = os.path.expanduser(filename)
@@ -217,7 +210,7 @@ class ConnectionParams():
                                        fallback=False)
         username = rc_config.get("authentication", "username", fallback=None)
         password = rc_config.get("authentication", "password", fallback=None)
-        key_file = rc_config.get("ssl","userkey", fallback=None)
+        key_file = rc_config.get("ssl", "userkey", fallback=None)
         cert_file = rc_config.get("ssl", "usercert", fallback=None)
 
         return ConnectionParams(host=host, port=port, username=username,
@@ -280,9 +273,6 @@ class Db():
             return {}
 
         d = {key: Db.convert_value(val) for key, val in subconfig.items()}
-
-        if "class" in d:
-            d["class"] = d["class"].split(".")[-1]  # Class name only
 
         return d
 

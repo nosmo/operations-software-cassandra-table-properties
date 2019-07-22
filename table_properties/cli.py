@@ -1,4 +1,4 @@
-# pylint: disable=broad-except, invalid-name
+# pylint: disable=broad-except, invalid-name, too-many-branches
 """ CLI interface class
 """
 import argparse
@@ -9,18 +9,20 @@ import sys
 
 import yaml
 
-import table_properties as tp
+from table_properties import PROG_NAME, PROG_VERSION
+import table_properties.db as db
+import table_properties.utils as utils
+import table_properties.generator as gen
 
 
 class TablePropertiesCli():
     """Command-line interface class
     """
-
     def __init__(self):
         self._args = None
 
     @staticmethod
-    def get_arg_parser()->argparse.ArgumentParser:
+    def get_arg_parser() -> argparse.ArgumentParser:
         """Set up CLI arguments in parser
 
         Returns:
@@ -30,11 +32,10 @@ class TablePropertiesCli():
               "desired properties defined in a YAML file and create ALTER " \
               "KEYSPACE and ALTER TABLE statements for properties that " \
               "differ."
-        parser = argparse.ArgumentParser(prog=tp.PROG_NAME,
+        parser = argparse.ArgumentParser(prog=PROG_NAME,
                                          description=msg,
-                                         formatter_class=lambda prog:
-                                         argparse.RawTextHelpFormatter(
-                                             prog, width=120))
+                                         formatter_class=lambda prog: argparse.
+                                         RawTextHelpFormatter(prog, width=120))
 
         parser.add_argument(metavar="<filename>",
                             nargs="?",
@@ -73,7 +74,7 @@ class TablePropertiesCli():
                             metavar="<filename>",
                             dest="log_file",
                             help="Log file name. If none is provied, "
-                                 "STDERR is used.",
+                            "STDERR is used.",
                             required=False)
 
         parser.add_argument("-p",
@@ -90,11 +91,12 @@ class TablePropertiesCli():
                             help="Prompt for password.",
                             action="store_true")
 
-        parser.add_argument("-q", "--quiet",
+        parser.add_argument("-q",
+                            "--quiet",
                             dest="run_quiet",
-                            help="When the flag is set exit with 0 only if the "
-                                 "configuration matches the YAML file. Exit "
-                                 "with 1 otherwise.",
+                            help="When the flag is set exit with 0 only if the"
+                            " configuration matches the YAML file. Exit "
+                            "with 1 otherwise.",
                             action="store_true")
 
         parser.add_argument("-r",
@@ -102,13 +104,14 @@ class TablePropertiesCli():
                             metavar="<filename>",
                             dest="rc_file",
                             help="cqlrc file name. "
-                                 "Default: ~/.cassandra/cqlshrc",
+                            "Default: ~/.cassandra/cqlshrc",
                             required=False)
 
-        parser.add_argument("-s", "--ssl",
+        parser.add_argument("-s",
+                            "--ssl",
                             dest="use_ssl",
                             help="Use SSL/TLS encryption for client server "
-                                 "communication.",
+                            "communication.",
                             action="store_true")
 
         parser.add_argument("-u",
@@ -121,8 +124,7 @@ class TablePropertiesCli():
         parser.add_argument("-v",
                             "--version",
                             action="version",
-                            version="{} {}".format(tp.PROG_NAME,
-                                                   tp.PROG_VERSION))
+                            version="{} {}".format(PROG_NAME, PROG_VERSION))
 
         return parser
 
@@ -130,7 +132,7 @@ class TablePropertiesCli():
         """Execute applicaton
         """
         password = None
-        log_level = os.environ.get("TP_LOG_LEVEL", tp.utils.DEFAULT_LOG_LEVEL)
+        log_level = os.environ.get("TP_LOG_LEVEL", utils.DEFAULT_LOG_LEVEL)
 
         parser = TablePropertiesCli.get_arg_parser()
 
@@ -138,25 +140,25 @@ class TablePropertiesCli():
         self._args = parser.parse_args(args=args)
 
         # Modify root logger settings
-        tp.utils.setup_logging(self._args.log_file,
-                               tp.utils.get_log_level(log_level))
+        utils.setup_logging(self._args.log_file,
+                            utils.get_log_level(log_level))
 
         # Get password from user if required
         if self._args.password_reqd:
             password = getpass.getpass(prompt="Password: ")
 
         config_filename = None
-        conn_params = tp.database.ConnectionParams()
+        conn_params = db.ConnectionParams()
         if self._args.rc_file:
             if not os.path.exists(self._args.rc_file):
                 print("File '{}' not found.".format(self._args.rc_file))
                 sys.exit(1)
 
-            print("Reading configuration from '{}'..."
-                  .format(self._args.rc_file), file=sys.stderr)
+            print("Reading configuration from '{}'...".format(
+                self._args.rc_file),
+                  file=sys.stderr)
             conn_params = \
-                tp.database.ConnectionParams.load_from_rcfile(
-                    self._args.rc_file)
+                db.ConnectionParams.load_from_rcfile(self._args.rc_file)
 
         # Apply switch settings.
         if self._args.host_ip:
@@ -177,23 +179,21 @@ class TablePropertiesCli():
         try:
             if self._args.dump_config or self._args.config_filename:
                 # Construct the connection parameters
-                db = tp.database.Db(conn_params)
+                conn = db.Db(conn_params)
 
                 # Read current configuration from database
-                current_config = db.get_current_config()
+                current_config = conn.get_current_config()
 
                 if self._args.dump_config:
-                    print(yaml.dump(current_config,
-                                    default_flow_style=False))
+                    print(yaml.dump(current_config, default_flow_style=False))
                 else:
                     config_filename = self._args.config_filename
                     logging.info("Reading config from '%s'", config_filename)
-                    desired_config = tp.utils.load_yaml(config_filename)
+                    desired_config = utils.load_yaml(config_filename)
 
                     # Generate ALTER statements for Keyspaces and Tables
-                    alter_statements = tp.generator. \
-                        generate_alter_statements(current_config,
-                                                  desired_config)
+                    alter_statements = gen.generate_alter_statements(
+                        current_config, desired_config)
 
                     print(alter_statements)
 
@@ -212,6 +212,7 @@ def main():
     """
     cmd = TablePropertiesCli()
     cmd.execute(args=sys.argv[1:])
+
 
 if __name__ == "__main__":
     main()
