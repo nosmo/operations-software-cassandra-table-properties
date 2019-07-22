@@ -3,7 +3,7 @@ import datetime
 
 import pytest
 
-import table_properties as tp
+import src as tp
 
 
 def get_temp_filename(prefix: str):

@@ -3,7 +3,7 @@ import copy
 
 # import pytest
 
-import table_properties as tp
+import src as tp
 
 
 def compare_statments(actual, expected):

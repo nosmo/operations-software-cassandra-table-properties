@@ -2,7 +2,7 @@
 import pytest
 import yaml
 
-from table_properties.db import Db, ConnectionParams
+from src.db import Db, ConnectionParams
 
 # pylint: disable=unused-argument, invalid-name, no-self-use
 

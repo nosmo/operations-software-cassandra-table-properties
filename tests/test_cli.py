@@ -3,7 +3,7 @@ import argparse
 
 import pytest
 
-import table_properties.cli as cli
+import src.cli as cli
 
 
 # pylint: disable=too-few-public-methods

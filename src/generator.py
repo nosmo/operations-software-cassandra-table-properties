@@ -3,7 +3,7 @@
 """
 import logging
 
-from table_properties import utils
+from src import utils
 
 
 def do_class_names_match(src_class: str, dst_class: str) -> bool:

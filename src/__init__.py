@@ -8,4 +8,4 @@ except ImportError as iex:
     exit(1)
 
 PROG_NAME = "table-properties"
-PROG_VERSION = 0.4
+PROG_VERSION = 0.5

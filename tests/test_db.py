@@ -1,7 +1,7 @@
 # pylint: disable=missing-docstring, invalid-name, no-self-use
 import pytest
 
-import table_properties.db as db
+import src.db as db
 
 
 # pylint: disable=too-few-public-methods

@@ -30,7 +30,7 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
-            'table-properties = table_properties.cli:main'
+            'table-properties = src.cli:main'
         ],
     }
 )

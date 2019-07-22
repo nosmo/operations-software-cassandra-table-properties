@@ -9,10 +9,10 @@ import sys
 
 import yaml
 
-from table_properties import PROG_NAME, PROG_VERSION
-import table_properties.db as db
-import table_properties.utils as utils
-import table_properties.generator as gen
+from src import PROG_NAME, PROG_VERSION
+import src.db as db
+import src.utils as utils
+import src.generator as gen
 
 
 class TablePropertiesCli():
