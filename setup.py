@@ -11,13 +11,13 @@ if os.path.exists("README.md"):
 
 setuptools.setup(
     name="cassandra-table-properties",
-    version="0.3.0",
+    version="1.0.0",
     author="Holger Knust",
     author_email="hknust@wikimedia.org",
     description="Cassandra table and keyspace configuration tool.",
     long_description=LONG_DESC,
     long_description_content_type="text/markdown",
-    url="https://github.com/hknustwmf/cassandra-table-properties",
+    url="https://github.com/wikimedia/operations-software-cassandra-table-properties",
     packages=setuptools.find_packages(),
     install_requires=[
         "cassandra-driver",
@@ -30,7 +30,9 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
-            'table-properties = src.cli:main'
+            'cassandra-table-properties = tableproperties.cli:main'
         ],
-    }
+    },
+    use_scm_version=True,
+    setup_requires=['setuptools_scm']
 )

@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: cassandra-table-properties
-Sources: https://github.com/hknustwmf/table-properties
+Sources: https://github.com/wikimedia/operations-software-cassandra-table-properties
 
 Files: *
 Copyright: (c) 2019 Wikimedia Foundation

@@ -1,21 +1,20 @@
 Source: cassandra-table-properties
-Section: python
+Section: contrib/python
 Priority: optional
-Upstream-Maintainer: Holger Knust <hknust@wikimedia.org>
 Maintainer: Holger Knust <hknust@wikimedia.org>
-Build-Depends: debhelper (>= 9),
-               python3-yaml,
-               python3-cassandra
+Standards-Version: 4.2.0
+Build-Depends:
+    debhelper (>= 9),
+    python3 (>= 3.4),
+    python3-yaml,
+    python3-cassandra
+Homepage: https://github.com/wikimedia/operations-software-cassandra-table-properties
+Vcs-Git: https://gerrit.wikimedia.org/r/operations/software/cassandra-table-properties
 X-Python-Version: >= 3.4
-Standards-Version: 3.9.2
-Vcs-Git: https://github.com/hknustwmf/table-properties
-Homepage: https://github.com/hknustwmf/table-properties
 
 Package: cassandra-table-properties
 Architecture: all
-Depends: ${python3:Depends},
-         ${misc:Depends},
-         python3
+Depends: ${python3:Depends}, ${misc:Depends}
 Description: Utility to update Cassandra properties
  This package can be used to update Cassandra properties
  via YAML file instead of writing CQL statements. It also
