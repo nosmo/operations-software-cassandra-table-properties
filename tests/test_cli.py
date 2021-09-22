@@ -3,11 +3,11 @@ import argparse
 
 import pytest
 
-import src.cli as cli
+import tableproperties.cli as cli
 
 
 # pylint: disable=too-few-public-methods
-class TestTablePropertiesCli():
+class TestTablePropertiesCli:
     def test_invoke_no_args_usage(self, capsys):
         cmd = cli.TablePropertiesCli()
         cmd.execute([])
@@ -45,8 +45,7 @@ class TestTablePropertiesCli():
         with pytest.raises(SystemExit):
             cmd.execute(["-r", "tests/setup/cqlshrc12345", "-d"])
         out, _ = capsys.readouterr()
-        assert out.strip().startswith(
-            "File 'tests/setup/cqlshrc12345' not found")
+        assert out.strip().startswith("File 'tests/setup/cqlshrc12345' not found")
 
     def test_argparser(self):
         parser = cli.TablePropertiesCli.get_arg_parser()

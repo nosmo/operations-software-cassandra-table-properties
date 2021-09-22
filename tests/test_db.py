@@ -1,11 +1,11 @@
 # pylint: disable=missing-docstring, invalid-name, no-self-use
 import pytest
 
-import src.db as db
+import tableproperties.db as db
 
 
 # pylint: disable=too-few-public-methods
-class TestDb():
+class TestDb:
     def test_default_database(self):
         d = db.Db()
         assert d is not None, "No parameter Db() instance should be created"
@@ -26,7 +26,7 @@ class TestDb():
             d.check_connection()
 
 
-class TestConnectionParams():
+class TestConnectionParams:
     def test_defaults(self):
         cp = db.ConnectionParams()
         assert cp.host == [db.DEFAULT_HOST]
