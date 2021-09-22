@@ -8,7 +8,7 @@ def get_temp_filename(prefix: str):
     return prefix + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
 
-class TestFindByValue():
+class TestFindByValue:
     def test_simple_list(self):
         l = [1, 2, 3, 4]
         assert utils.find_by_value(l, "a", 1) is None

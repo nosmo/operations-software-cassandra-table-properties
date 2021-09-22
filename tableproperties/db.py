@@ -9,23 +9,26 @@ from typing import Any, Dict, List, Optional
 
 from cassandra import __version__ as cassver, auth, cluster, query, util, policies
 
-DEFAULT_HOST = '127.0.0.1'
+DEFAULT_HOST = "127.0.0.1"
 DEFAULT_NATIVE_CQL_PORT = 9042
 
 MAPPED_FIELD_NAMES = {"keyspace_name": "name", "table_name": "name"}
 
 
-class ConnectionParams():
+class ConnectionParams:
     """ Cassandra connection parameters """
-    def __init__(self,
-                 host: str = DEFAULT_HOST,
-                 port: int = DEFAULT_NATIVE_CQL_PORT,
-                 lbp: policies.LoadBalancingPolicy = None,
-                 username: str = None,
-                 password: str = None,
-                 ssl_required: bool = False,
-                 client_cert_filename: str = None,
-                 client_key_filename: str = None):
+
+    def __init__(
+        self,
+        host: str = DEFAULT_HOST,
+        port: int = DEFAULT_NATIVE_CQL_PORT,
+        lbp: policies.LoadBalancingPolicy = None,
+        username: str = None,
+        password: str = None,
+        ssl_required: bool = False,
+        client_cert_filename: str = None,
+        client_key_filename: str = None,
+    ):
         """Construct connection settings dictionary.
         Args:
             host:             IP address or hostname
@@ -46,14 +49,16 @@ class ConnectionParams():
         self._client_key_filename = client_key_filename
         if ssl_required or (client_cert_filename and client_key_filename):
             self._ssl_context = ssl.SSLContext(
-                ssl.PROTOCOL_TLSv1)  # type: Optional[ssl.SSLContext]
+                ssl.PROTOCOL_TLSv1
+            )  # type: Optional[ssl.SSLContext]
             # Build options dict for older driver versions
             self._ssl_options = {
                 "ssl_version": ssl.PROTOCOL_TLSv1
             }  # type: Optional[Dict[str, Any]]
             if client_cert_filename and client_key_filename:
                 self._ssl_context.load_cert_chain(
-                    certfile=client_cert_filename, keyfile=client_key_filename)
+                    certfile=client_cert_filename, keyfile=client_key_filename
+                )
                 self._ssl_options["ca_certs"] = client_cert_filename
         else:
             self._ssl_context = None
@@ -87,8 +92,9 @@ class ConnectionParams():
     @property
     def load_balancing_policy(self) -> policies.LoadBalancingPolicy:
         """ Get the load balancing policy """
-        return self._lbp if self._lbp else policies.WhiteListRoundRobinPolicy(
-            [self._host])
+        return (
+            self._lbp if self._lbp else policies.WhiteListRoundRobinPolicy([self._host])
+        )
 
     @load_balancing_policy.setter
     def load_balancing_policy(self, value: policies.LoadBalancingPolicy):
@@ -120,8 +126,7 @@ class ConnectionParams():
     @property
     def is_ssl_required(self) -> bool:
         """ Is SSL/TLS required """
-        return self._ssl_required if isinstance(self._ssl_required, bool) \
-            else False
+        return self._ssl_required if isinstance(self._ssl_required, bool) else False
 
     @is_ssl_required.setter
     def is_ssl_required(self, value: bool) -> None:
@@ -174,22 +179,23 @@ class ConnectionParams():
         if self._client_cert_filename and self._client_key_filename:
             # Only update if both are set
             self._ssl_context.load_cert_chain(
-                certfile=self._client_cert_filename,
-                keyfile=self._client_key_filename)
+                certfile=self._client_cert_filename, keyfile=self._client_key_filename
+            )
             self._ssl_options["ca_certs"] = self._client_cert_filename
 
     def _update_authentication_provider(self):
         """ Create/recreate the auth provider """
         if self._username and self._password:
             # Only update provider when both are set
-            self._auth_provider = \
-                auth.PlainTextAuthProvider(self._username, self._password)
+            self._auth_provider = auth.PlainTextAuthProvider(
+                self._username, self._password
+            )
         else:
             self._auth_provider = None
 
     @staticmethod
     def load_from_rcfile(filename: str):
-        """ Read and parse a cqlshrc file
+        """Read and parse a cqlshrc file
         Args:
             filename: location of cqlshrc file
 
@@ -203,9 +209,7 @@ class ConnectionParams():
             rc_config.read_file(rc_file)
 
         host = rc_config.get("connection", "hostname", fallback=DEFAULT_HOST)
-        port = rc_config.getint("connection",
-                                "port",
-                                fallback=DEFAULT_NATIVE_CQL_PORT)
+        port = rc_config.getint("connection", "port", fallback=DEFAULT_NATIVE_CQL_PORT)
         use_tls = rc_config.getboolean("connection", "ssl", fallback=False)
         username = rc_config.get("authentication", "username", fallback=None)
         password = rc_config.get("authentication", "password", fallback=None)
@@ -213,21 +217,25 @@ class ConnectionParams():
         cert_file = rc_config.get("ssl", "usercert", fallback=None)
         lbp = policies.WhiteListRoundRobinPolicy([host])
 
-        return ConnectionParams(host=host,
-                                port=port,
-                                username=username,
-                                password=password,
-                                ssl_required=use_tls,
-                                client_cert_filename=cert_file,
-                                client_key_filename=key_file,
-                                lbp=lbp)
+        return ConnectionParams(
+            host=host,
+            port=port,
+            username=username,
+            password=password,
+            ssl_required=use_tls,
+            client_cert_filename=cert_file,
+            client_key_filename=key_file,
+            lbp=lbp,
+        )
 
 
 class AbstractDb(ABC):
     """ Db Interface"""
+
     @abstractmethod
     def check_connection(self):
         """ Check connection stub """
+
     @abstractmethod
     def get_current_config(self, drop_ids: bool) -> Optional[Dict[Any, Any]]:
         """ Get current DB config """
@@ -235,18 +243,22 @@ class AbstractDb(ABC):
 
 class Db(AbstractDb):
     """ Database class """
-    def __init__(self, connection_params: ConnectionParams = None):
-        self._params = connection_params if connection_params \
-            else ConnectionParams()
 
-        self._params.host = self._params.host[0] if isinstance(
-            self._params.host, list) else self._params.host
+    def __init__(self, connection_params: ConnectionParams = None):
+        self._params = connection_params if connection_params else ConnectionParams()
+
+        self._params.host = (
+            self._params.host[0]
+            if isinstance(self._params.host, list)
+            else self._params.host
+        )
 
         self.cluster = cluster.Cluster(
             [self._params.host],
             load_balancing_policy=self._params.load_balancing_policy,
             port=self._params.port,
-            auth_provider=self._params.auth_provider)
+            auth_provider=self._params.auth_provider,
+        )
 
         if hasattr(self.cluster, "ssl_context"):
             self.cluster.ssl_context = self._params.ssl_context
@@ -254,6 +266,7 @@ class Db(AbstractDb):
             # driver versions < 3.17.0 do not have support for ssl_context
             self.cluster.ssl_options = self._params.ssl_options
 
+    #TODO replace this function with ast.literal_eval
     @staticmethod
     def convert_value(val: Any) -> Any:
         """Convert a string to correct int or float where possible
@@ -291,8 +304,12 @@ class Db(AbstractDb):
         Returns:
             Dictionary with converted object properties
         """
-        return {key: Db.convert_value(val) for key, val in subconfig.items()} \
-            if isinstance(subconfig, util.OrderedMapSerializedKey) else {}
+        #TODO replace with ast.literal_eval
+        return (
+            {key: Db.convert_value(val) for key, val in subconfig.items()}
+            if isinstance(subconfig, util.OrderedMapSerializedKey)
+            else {}
+        )
 
     def exec_query(self, query_stmt: str) -> list:
         """Execute Cassandra query
@@ -338,15 +355,15 @@ class Db(AbstractDb):
                 if isinstance(val, util.OrderedMapSerializedKey):
                     val = Db.convert_mapped_props(val)
                 elif key == "flags":
-                    val = list(val) if \
-                        isinstance(val, util.SortedSet) else val
+                    val = list(val) if isinstance(val, util.SortedSet) else val
                 keyspace[mapped_key] = val
             keyspace_configs.append(keyspace)
 
         return {"keyspaces": keyspace_configs}
 
-    def get_table_configs(self, keyspace_name: str,
-                          drop_ids: bool) -> List[Dict[str, Any]]:
+    def get_table_configs(
+        self, keyspace_name: str, drop_ids: bool
+        ) -> List[Dict[str, Any]]:
         """Retrieve table properties
 
         Args:
@@ -357,8 +374,10 @@ class Db(AbstractDb):
         """
         table_configs = []
 
-        query_stmt = "SELECT * FROM system_schema.tables " \
-                     "WHERE keyspace_name = '{}';".format(keyspace_name)
+        query_stmt = (
+            "SELECT * FROM system_schema.tables "
+            "WHERE keyspace_name = '{}';".format(keyspace_name)
+        )
 
         rows = self.exec_query(query_stmt)
         for row in rows:
@@ -369,8 +388,7 @@ class Db(AbstractDb):
                 elif isinstance(val, util.OrderedMapSerializedKey):
                     val = Db.convert_mapped_props(val)
                 elif key == "flags":
-                    val = list(val) \
-                        if isinstance(val, util.SortedSet) else val
+                    val = list(val) if isinstance(val, util.SortedSet) else val
                 elif key == "id":
                     val = str(val)
                 tbl[MAPPED_FIELD_NAMES.get(key, key)] = val
@@ -379,8 +397,7 @@ class Db(AbstractDb):
 
         return table_configs
 
-    def get_current_config(self,
-                           drop_ids: bool = False) -> Optional[Dict[Any, Any]]:
+    def get_current_config(self, drop_ids: bool = False) -> Optional[Dict[Any, Any]]:
         """Retrieve the current config from the Cassandra instance.
 
         Args:
@@ -395,7 +412,6 @@ class Db(AbstractDb):
             return None
 
         for keyspace in keyspace_config.get("keyspaces", []):
-            keyspace["tables"] = self.get_table_configs(
-                keyspace.get("name"), drop_ids)
+            keyspace["tables"] = self.get_table_configs(keyspace.get("name"), drop_ids)
 
         return keyspace_config

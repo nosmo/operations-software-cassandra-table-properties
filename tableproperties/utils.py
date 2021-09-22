@@ -1,4 +1,4 @@
-# pylint: disable = missing-docstring, broad-except
+# pylint: disable = missing-docstring
 """ Helper functions
 """
 import logging
@@ -9,8 +9,7 @@ DEFAULT_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 DEFAULT_LOG_LEVEL = "CRITICAL"
 
 
-def setup_logging(log_file: str = None,
-                  log_level: str = DEFAULT_LOG_LEVEL) -> None:
+def setup_logging(log_file: str = None, log_level: str = DEFAULT_LOG_LEVEL) -> None:
     """Apply log format and set level to root logger
 
     Args:
@@ -23,9 +22,7 @@ def setup_logging(log_file: str = None,
 
     log_level = getattr(logging, log_level.upper())
 
-    logging.basicConfig(format=DEFAULT_LOG_FORMAT,
-                        handlers=hdlrs,
-                        level=log_level)
+    logging.basicConfig(format=DEFAULT_LOG_FORMAT, handlers=hdlrs, level=log_level)
 
 
 def find_by_value(dict_list: list, key: str, value, default_value=None) -> Any:
@@ -38,7 +35,7 @@ def find_by_value(dict_list: list, key: str, value, default_value=None) -> Any:
         return default_value
 
     matches = list(
-        filter(lambda x: isinstance(x, dict) and x.get(key) == value,
-               dict_list))
+        filter(lambda x: isinstance(x, dict) and x.get(key) == value, dict_list)
+    )
 
     return matches[0] if matches else default_value

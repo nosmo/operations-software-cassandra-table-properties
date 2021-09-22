@@ -26,13 +26,15 @@ class TestGenerator:
     def test_excalibur_increase_replicas(self, default_database):
         # Load the YAML
         desired_config = load_yaml(
-            "./tableproperties/tests/configs/excalibur_incr_dcs.yaml")
+            "./tableproperties/tests/configs/excalibur_incr_dcs.yaml"
+        )
 
         current_config = default_database.get_current_config(True)
 
         # Validate output
-        stmt = gen.generate_alter_statements(copy.deepcopy(current_config),
-                                             desired_config)
+        stmt = gen.generate_alter_statements(
+            copy.deepcopy(current_config), desired_config
+        )
 
         assert stmt is not None
         assert "'data_center1': 4" in stmt
@@ -41,13 +43,15 @@ class TestGenerator:
     def test_excalibur_unchanged(self, default_database):
         # Load the YAML
         desired_config = load_yaml(
-            "./tableproperties/tests/configs/excalibur_unchanged.yaml")
+            "./tableproperties/tests/configs/excalibur_unchanged.yaml"
+        )
 
         current_config = default_database.get_current_config(True)
 
         # Validate generator output
-        stmt = gen.generate_alter_statements(copy.deepcopy(current_config),
-                                             desired_config)
+        stmt = gen.generate_alter_statements(
+            copy.deepcopy(current_config), desired_config
+        )
 
         assert isinstance(stmt, str)
         assert stmt == ""
@@ -55,18 +59,22 @@ class TestGenerator:
     def test_excalibur_change_table_fields(self, default_database):
         # Load the YAML
         desired_config = load_yaml(
-            "./tableproperties/tests/configs/excalibur_change_comments.yaml")
+            "./tableproperties/tests/configs/excalibur_change_comments.yaml"
+        )
 
         current_config = default_database.get_current_config(True)
 
         # Validate output
-        stmt = gen.generate_alter_statements(copy.deepcopy(current_config),
-                                             desired_config)
+        stmt = gen.generate_alter_statements(
+            copy.deepcopy(current_config), desired_config
+        )
 
-        expected_stmt = "\nALTER TABLE \"excalibur\".\"monkeyspecies\"\n" \
-            "WITH comment = 'Test comment';" \
-            "\nALTER TABLE \"excalibur\".\"monkeyspecies2\"\n" \
+        expected_stmt = (
+            '\nALTER TABLE "excalibur"."monkeyspecies"\n'
+            "WITH comment = 'Test comment';"
+            '\nALTER TABLE "excalibur"."monkeyspecies2"\n'
             "WITH comment = 'Test comment 2';"
+        )
         assert stmt is not None
         assert stmt != ""
         compare_statments(stmt, expected_stmt)
@@ -74,12 +82,15 @@ class TestGenerator:
     def test_class_name_comparision(self):
         assert gen.do_class_names_match("SimpleStrategy", "SimpleStrategy")
         assert gen.do_class_names_match(
-            "org.apache.cassandra.locator.SimpleStrategy", "SimpleStrategy")
+            "org.apache.cassandra.locator.SimpleStrategy", "SimpleStrategy"
+        )
         assert gen.do_class_names_match(
             "org.apache.cassandra.locator.SimpleStrategy",
-            "org.apache.cassandra.locator.SimpleStrategy")
+            "org.apache.cassandra.locator.SimpleStrategy",
+        )
         assert not gen.do_class_names_match(
             "org.apache.cassandra.locator.SimpleStrategy",
-            "org.apache.cassandra.locator1.SimpleStrategy")
+            "org.apache.cassandra.locator1.SimpleStrategy",
+        )
         assert gen.do_class_names_match("", "")
         assert gen.do_class_names_match(None, None)

@@ -2,15 +2,16 @@
 import pytest
 import yaml
 
-from src.db import Db, ConnectionParams
+from tableproperties.db import Db, ConnectionParams
 
 # pylint: disable=unused-argument, invalid-name, no-self-use
 
 DB = None
 
 
-class MockDb():
+class MockDb:
     """ Mock database class """
+
     def __init__(self, connection_params: ConnectionParams = None):
         # self._params = connection_params.copy() if connection_params \
         #     else ConnectionParams()
@@ -40,10 +41,10 @@ class MockDb():
 
 @pytest.fixture(scope="session")
 def default_database():
-    """ Set up local database (localhost)
+    """Set up local database (localhost)
 
-        Test if a local Cassandra instance is available for testing. If not
-        use mock data to run tests.
+    Test if a local Cassandra instance is available for testing. If not
+    use mock data to run tests.
     """
     global DB  # pylint: disable=global-statement
 
@@ -54,11 +55,14 @@ def default_database():
         sel_stmt = "SELECT keyspace_name FROM system_schema.keyspaces"
         rows = DB.exec_query(sel_stmt)
 
-        keyspace_names = [row.get("keyspace_name") for row in rows
-                          if not row.get("keyspace_name").startswith("system")]
+        keyspace_names = [
+            row.get("keyspace_name")
+            for row in rows
+            if not row.get("keyspace_name").startswith("system")
+        ]
 
         for keyspace in keyspace_names:
-            DB.exec_query("DROP KEYSPACE IF EXISTS \"{}\"".format(keyspace))
+            DB.exec_query('DROP KEYSPACE IF EXISTS "{}"'.format(keyspace))
 
         # Populate instance with sample schemas
         with open("./tests/setup/cql/create_excalibur.cql", "r") as f:

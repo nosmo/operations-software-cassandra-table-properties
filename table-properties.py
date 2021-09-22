@@ -12,5 +12,5 @@ if PY_VER_MAJOR < 3 or (PY_VER_MAJOR == 3 and PY_VER_MINOR < 4):
           .format(PY_VER_MAJOR, PY_VER_MINOR))
     exit(1)
 
-from src import cli  # noqa
+from tableproperties import cli  # noqa
 cli.main()

@@ -9,6 +9,7 @@ from tableproperties.db import AbstractDb, ConnectionParams
 
 class MockDb(AbstractDb):
     """ Mock database class """
+
     def __init__(self, connection_params: ConnectionParams = None):
         pass
 
@@ -36,8 +37,8 @@ class MockDb(AbstractDb):
 
 @pytest.fixture()
 def default_database():
-    """ Set up local database (localhost)
+    """Set up local database (localhost)
 
-        Returns mock configuration data to run tests.
+    Returns mock configuration data to run tests.
     """
     return MockDb()

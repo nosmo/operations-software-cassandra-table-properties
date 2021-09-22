@@ -7,9 +7,11 @@ import tableproperties.db as db
 
 
 # pylint: disable=too-few-public-methods
-class TestDb():
+class TestDb:
     def test_default_database(self, default_database):
-        assert default_database is not None, "No parameter Db() instance should be created"
+        assert (
+            default_database is not None
+        ), "No parameter Db() instance should be created"
         assert default_database.check_connection()
 
     def test_convert_value(self):
@@ -27,7 +29,7 @@ class TestDb():
             d.check_connection()
 
 
-class TestConnectionParams():
+class TestConnectionParams:
     def test_defaults(self):
         cp = db.ConnectionParams()
         assert cp.host == db.DEFAULT_HOST
@@ -68,12 +70,12 @@ class TestConnectionParams():
         assert cp.ssl_context is not None
 
     def test_load_rc(self):
-        cp = db.ConnectionParams.load_from_rcfile(
-            "tableproperties/tests/setup/cqlshrc")
+        cp = db.ConnectionParams.load_from_rcfile("tableproperties/tests/setup/cqlshrc")
         assert cp is not None
         assert isinstance(cp, db.ConnectionParams)
 
     def test_load_nonexisting_rc(self):
         with pytest.raises(Exception):
             db.ConnectionParams.load_from_rcfile(
-                "tableproperties/tests/setup/cqlshrc1234")
+                "tableproperties/tests/setup/cqlshrc1234"
+            )
