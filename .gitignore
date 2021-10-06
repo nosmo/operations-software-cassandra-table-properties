@@ -50,3 +50,5 @@ debian/files
 .mypy_cache
 bin/
 .pybuild
+
+venv/

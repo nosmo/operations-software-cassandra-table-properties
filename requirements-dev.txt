@@ -10,3 +10,4 @@ rope==0.14.0
 tox==3.13.1
 setuptools==41.0.1
 setuptools-scm==3.3.3
+dictdiffer==0.9.0
