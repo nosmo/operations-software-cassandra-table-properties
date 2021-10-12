@@ -32,8 +32,8 @@ class TestDb:
 class TestConnectionParams:
     def test_defaults(self):
         cp = db.ConnectionParams()
-        assert cp.host == db.DEFAULT_HOST
-        assert cp.port == db.DEFAULT_NATIVE_CQL_PORT
+        assert cp.host == "localhost"
+        assert cp.port == 9042
         assert cp.auth_provider is None
         assert not cp.is_ssl_required
         assert cp.ssl_context is None

@@ -9,26 +9,22 @@ from typing import Any, Dict, List, Optional
 
 from cassandra import __version__ as cassver, auth, cluster, query, util, policies
 
-DEFAULT_HOST = "127.0.0.1"
-DEFAULT_NATIVE_CQL_PORT = 9042
-
 MAPPED_FIELD_NAMES = {"keyspace_name": "name", "table_name": "name"}
 
 
 class ConnectionParams:
     """ Cassandra connection parameters """
 
-    def __init__(
-        self,
-        host: str = DEFAULT_HOST,
-        port: int = DEFAULT_NATIVE_CQL_PORT,
-        lbp: policies.LoadBalancingPolicy = None,
-        username: str = None,
-        password: str = None,
-        ssl_required: bool = False,
-        client_cert_filename: str = None,
-        client_key_filename: str = None,
-    ):
+    def __init__(self,
+                 host: str = "localhost",
+                 port: int = 9042,
+                 lbp: policies.LoadBalancingPolicy = None,
+                 username: str = None,
+                 password: str = None,
+                 ssl_required: bool = False,
+                 client_cert_filename: str = None,
+                 client_key_filename: str = None,
+                 ):
         """Construct connection settings dictionary.
         Args:
             host:             IP address or hostname
@@ -40,15 +36,15 @@ class ConnectionParams:
             client_cert_file: location of client certificate
             client_key_file:  location of client key
         """
-        self._host = host if isinstance(host, str) else DEFAULT_HOST
-        self._port = port if isinstance(port, int) else DEFAULT_NATIVE_CQL_PORT
+        self.host = host
+        self.port = port
         # Default LBP
         self._lbp = lbp
         self._ssl_required = ssl_required  # None = not set
         self._client_cert_filename = client_cert_filename
         self._client_key_filename = client_key_filename
         if ssl_required or (client_cert_filename and client_key_filename):
-            self._ssl_context = ssl.SSLContext(
+            self.ssl_context = ssl.SSLContext(
                 ssl.PROTOCOL_TLSv1
             )  # type: Optional[ssl.SSLContext]
             # Build options dict for older driver versions
@@ -56,44 +52,27 @@ class ConnectionParams:
                 "ssl_version": ssl.PROTOCOL_TLSv1
             }  # type: Optional[Dict[str, Any]]
             if client_cert_filename and client_key_filename:
-                self._ssl_context.load_cert_chain(
+                self.ssl_context.load_cert_chain(
                     certfile=client_cert_filename, keyfile=client_key_filename
                 )
                 self._ssl_options["ca_certs"] = client_cert_filename
         else:
-            self._ssl_context = None
+            self.ssl_context = None
             self._ssl_options = None
 
+        self.auth_provider = None
         self._username = username
         self._password = password
-        self._auth_provider = None
         self._update_authentication_provider()
 
-    @property
-    def host(self) -> str:
-        """ Get the host name """
-        return self._host if self._host else DEFAULT_HOST
-
-    @host.setter
-    def host(self, value: str) -> None:
-        """ Set the host name """
-        self._host = value if value else DEFAULT_HOST
-
-    @property
-    def port(self) -> int:
-        """ Get the port number """
-        return self._port if self._port else DEFAULT_NATIVE_CQL_PORT
-
-    @port.setter
-    def port(self, value: int) -> None:
-        """ Set the port """
-        self._port = value if value else DEFAULT_NATIVE_CQL_PORT
+    #TODO - we already set a default for many of these values in our
+    #constructor and we can remove the getters and setters.
 
     @property
     def load_balancing_policy(self) -> policies.LoadBalancingPolicy:
         """ Get the load balancing policy """
         return (
-            self._lbp if self._lbp else policies.WhiteListRoundRobinPolicy([self._host])
+            self._lbp if self._lbp else policies.WhiteListRoundRobinPolicy([self.host])
         )
 
     @load_balancing_policy.setter
@@ -157,28 +136,18 @@ class ConnectionParams:
         self._update_security_context()
 
     @property
-    def ssl_context(self) -> Optional[ssl.SSLContext]:
-        """ SSL Context """
-        return self._ssl_context
-
-    @property
     def ssl_options(self) -> Optional[Dict[str, Any]]:
         """ SSL Options """
         return self._ssl_options
 
-    @property
-    def auth_provider(self):
-        """ Auth Provider """
-        return self._auth_provider
-
     def _update_security_context(self):
         """ Create/recreate the security context """
-        if not self._ssl_context:
-            self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+        if not self.ssl_context:
+            self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
             self._ssl_options = {"ssl_version": ssl.PROTOCOL_TLSv1}
         if self._client_cert_filename and self._client_key_filename:
             # Only update if both are set
-            self._ssl_context.load_cert_chain(
+            self.ssl_context.load_cert_chain(
                 certfile=self._client_cert_filename, keyfile=self._client_key_filename
             )
             self._ssl_options["ca_certs"] = self._client_cert_filename
@@ -187,11 +156,9 @@ class ConnectionParams:
         """ Create/recreate the auth provider """
         if self._username and self._password:
             # Only update provider when both are set
-            self._auth_provider = auth.PlainTextAuthProvider(
+            self.auth_provider = auth.PlainTextAuthProvider(
                 self._username, self._password
             )
-        else:
-            self._auth_provider = None
 
     @staticmethod
     def load_from_rcfile(filename: str):
@@ -208,8 +175,8 @@ class ConnectionParams:
         with open(full_rc_filename, "r") as rc_file:
             rc_config.read_file(rc_file)
 
-        host = rc_config.get("connection", "hostname", fallback=DEFAULT_HOST)
-        port = rc_config.getint("connection", "port", fallback=DEFAULT_NATIVE_CQL_PORT)
+        host = rc_config.get("connection", "hostname", fallback="localhost")
+        port = rc_config.getint("connection", "port", fallback=9042)
         use_tls = rc_config.getboolean("connection", "ssl", fallback=False)
         username = rc_config.get("authentication", "username", fallback=None)
         password = rc_config.get("authentication", "password", fallback=None)
@@ -363,7 +330,7 @@ class Db(AbstractDb):
 
     def get_table_configs(
         self, keyspace_name: str, drop_ids: bool
-        ) -> List[Dict[str, Any]]:
+    ) -> List[Dict[str, Any]]:
         """Retrieve table properties
 
         Args:
@@ -415,3 +382,30 @@ class Db(AbstractDb):
             keyspace["tables"] = self.get_table_configs(keyspace.get("name"), drop_ids)
 
         return keyspace_config
+
+    def get_role_config(self) -> dict:
+        """Retrieve all users and their grants.
+
+        Returns:
+            Dictionary with role configurations.
+        """
+
+        role_details = {}
+        role_rows = self.exec_query("select * from system_auth.roles;")
+
+        #TODO this is hard to read - abstract into Role types?
+        for role_row in role_rows:
+            role_details[role_row["role"]] = {
+                "login": role_row["can_login"],
+                "superuser": role_row["is_superuser"],
+                "member_of": list(role_row["member_of"]) if role_row["member_of"] else [],
+                "permissions": {}
+            }
+
+        permission_rows = self.exec_query("select * from system_auth.role_permissions;")
+        for perm_row in permission_rows:
+            # Convert from sortedset to set for output purposes
+            role_details[perm_row["role"]]["permissions"][perm_row["resource"]] = list(
+                perm_row["permissions"])
+
+        return {"roles": role_details}

@@ -11,6 +11,9 @@ venv:
 dev: venv
 	. venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt
 
+docker_image:
+	docker build -t cassandra-table-properties-test tests/itest/
+
 clean:
 	rm -rf venv
 	find . -iname "*.pyc" -delete

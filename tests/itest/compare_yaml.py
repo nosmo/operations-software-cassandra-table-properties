@@ -15,11 +15,13 @@ def main():
     yaml2 = yaml.load(open(sys.argv[2]), Loader=yaml.SafeLoader)
 
     # delete table IDs for comparison purposes - they'll be randomly generated
-    # on creation
+    # on creation. -I flag on script removes this requirement
     for ks_id, keyspace in enumerate(yaml1["keyspaces"]):
         for tb_id, table in enumerate(keyspace["tables"]):
-            del(yaml1["keyspaces"][ks_id]["tables"][tb_id]["id"])
-            del(yaml2["keyspaces"][ks_id]["tables"][tb_id]["id"])
+            if "id" in yaml1["keyspaces"][ks_id]["tables"][tb_id]:
+                del(yaml1["keyspaces"][ks_id]["tables"][tb_id]["id"])
+            if "id" in yaml2["keyspaces"][ks_id]["tables"][tb_id]:
+                del(yaml2["keyspaces"][ks_id]["tables"][tb_id]["id"])
 
     retcode = 0
 

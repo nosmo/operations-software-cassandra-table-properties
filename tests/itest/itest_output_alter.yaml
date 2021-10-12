@@ -14,7 +14,7 @@ keyspaces:
     compaction:
       class: org.apache.cassandra.db.compaction.LeveledCompactionStrategy
     compression:
-      chunk_length_in_kb: 64
+      chunk_length_in_kb: 32
       class: org.apache.cassandra.io.compress.LZ4Compressor
     crc_check_chance: 1.0
     dclocal_read_repair_chance: 0.1
@@ -46,7 +46,7 @@ keyspaces:
     extensions: {}
     flags:
     - compound
-    gc_grace_seconds: 864000
+    gc_grace_seconds: 86400
     max_index_interval: 2048
     memtable_flush_period_in_ms: 0
     min_index_interval: 128
@@ -98,18 +98,26 @@ roles:
     permissions:
       data/local_group_default_T_pageviews_per_project_v2/data:
       - ALTER
+      # add DROP
+      - DROP
     superuser: false
   itest_user:
-    login: true
+    login: false
     member_of:
     - itest_role
     permissions:
-      data/local_group_default_T_pageviews_per_project_v2/data:
-      - DROP
       data/local_group_default_T_pageviews_per_project_v2/meta:
       - ALTER
-      - AUTHORIZE
+      # remove AUTHORIZE
       - DROP
       - MODIFY
       - SELECT
+    superuser: false
+  new_user:
+    login: false
+    member_of:
+    - itest_role
+    permissions:
+      data/local_group_default_T_pageviews_per_project_v2/meta:
+      - ALL
     superuser: false
