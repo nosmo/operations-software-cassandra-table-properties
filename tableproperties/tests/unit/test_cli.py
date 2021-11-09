@@ -8,7 +8,7 @@ from tableproperties import cli, tests, PROG_NAME
 
 
 # pylint: disable=too-few-public-methods
-class TestTablePropertiesCli():
+class TestTablePropertiesCli:
     def test_invoke_no_args_usage(self, capsys):
         cmd = cli.TablePropertiesCli()
         cmd.execute([])
@@ -33,17 +33,14 @@ class TestTablePropertiesCli():
     @pytest.mark.skip(reason="test requires local cassandra instance")
     def test_invoke_load_config(self, capsys):
         cmd = cli.TablePropertiesCli()
-        cmd.execute([
-            os.path.join(tests.TEST_ROOT, "configs/excalibur_unchanged.yaml")
-        ])
+        cmd.execute([os.path.join(tests.TEST_ROOT, "configs/excalibur_unchanged.yaml")])
         out, _ = capsys.readouterr()
         assert out.strip() == ""
 
     @pytest.mark.skip(reason="test requires local cassandra instance")
     def test_invoke_load_rc(self, capsys):
         cmd = cli.TablePropertiesCli()
-        cmd.execute(
-            ["-c", os.path.join(tests.TEST_ROOT, "setup/cqlshrc"), "-d"])
+        cmd.execute(["-c", os.path.join(tests.TEST_ROOT, "setup/cqlshrc"), "-d"])
         out, _ = capsys.readouterr()
         assert out.strip() != ""
 

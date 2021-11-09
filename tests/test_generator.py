@@ -2,7 +2,7 @@
 import copy
 import yaml
 
-import src as tp
+import tableproperties as tp
 
 
 def load_yaml(filename: str):
@@ -31,7 +31,8 @@ class TestGenerator:
 
         # Validate output
         stmt = tp.generator.generate_alter_statements(
-            copy.deepcopy(current_config), desired_config)
+            copy.deepcopy(current_config), desired_config
+        )
 
         assert stmt is not None
         assert "'data_center1': 4" in stmt
@@ -47,40 +48,45 @@ class TestGenerator:
 
         # Validate generator output
         stmt = tp.generator.generate_alter_statements(
-            copy.deepcopy(current_config), desired_config)
+            copy.deepcopy(current_config), desired_config
+        )
 
         assert isinstance(stmt, str)
         assert stmt == ""
 
     def test_excalibur_change_table_fields(self, default_database):
         # Load the YAML
-        desired_config = load_yaml(
-            "./tests/configs/excalibur_change_comments.yaml")
+        desired_config = load_yaml("./tests/configs/excalibur_change_comments.yaml")
 
         current_config = default_database.get_current_config(True)
 
         # Validate output
         stmt = tp.generator.generate_alter_statements(
-            copy.deepcopy(current_config), desired_config)
+            copy.deepcopy(current_config), desired_config
+        )
 
-        expected_stmt = "\nALTER TABLE \"excalibur\".\"monkeyspecies\"\n" \
-            "WITH comment = 'Test comment';" \
-            "\nALTER TABLE \"excalibur\".\"monkeyspecies2\"\n" \
+        expected_stmt = (
+            '\nALTER TABLE "excalibur"."monkeyspecies"\n'
+            "WITH comment = 'Test comment';"
+            '\nALTER TABLE "excalibur"."monkeyspecies2"\n'
             "WITH comment = 'Test comment 2';"
+        )
         assert stmt is not None
         assert stmt != ""
         compare_statments(stmt, expected_stmt)
 
     def test_class_name_comparision(self):
-        assert tp.generator.do_class_names_match("SimpleStrategy",
-                                                 "SimpleStrategy")
+        assert tp.generator.do_class_names_match("SimpleStrategy", "SimpleStrategy")
         assert tp.generator.do_class_names_match(
-            "org.apache.cassandra.locator.SimpleStrategy", "SimpleStrategy")
+            "org.apache.cassandra.locator.SimpleStrategy", "SimpleStrategy"
+        )
         assert tp.generator.do_class_names_match(
             "org.apache.cassandra.locator.SimpleStrategy",
-            "org.apache.cassandra.locator.SimpleStrategy")
+            "org.apache.cassandra.locator.SimpleStrategy",
+        )
         assert not tp.generator.do_class_names_match(
             "org.apache.cassandra.locator.SimpleStrategy",
-            "org.apache.cassandra.locator1.SimpleStrategy")
+            "org.apache.cassandra.locator1.SimpleStrategy",
+        )
         assert tp.generator.do_class_names_match("", "")
         assert tp.generator.do_class_names_match(None, None)
